@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Medika.Api/Medika.Api.csproj" />
+    <Project Path="src/Medika.Application/Medika.Application.csproj" />
+    <Project Path="src/Medika.Domain/Medika.Domain.csproj" />
+    <Project Path="src/Medika.Infrastructure/Medika.Infrastructure.csproj" />
   </Folder>
 </Solution>
