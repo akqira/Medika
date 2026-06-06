@@ -63,7 +63,6 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapIdMember(p => p.Id);
             cm.MapMember(p => p.Allergies).SetElementName("allergies");
             cm.MapMember(p => p.MedicalHistory).SetElementName("medicalHistory");
         });
@@ -76,7 +75,6 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapIdMember(a => a.Id);
         });
     }
 
@@ -87,7 +85,6 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapIdMember(c => c.Id);
             cm.MapMember(c => c.Prescription).SetElementName("prescription");
         });
     }
@@ -99,7 +96,6 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapIdMember(i => i.Id);
         });
     }
 
@@ -110,7 +106,6 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapIdMember(c => c.Id);
         });
     }
 
@@ -121,7 +116,6 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapIdMember(u => u.Id);
         });
     }
 }

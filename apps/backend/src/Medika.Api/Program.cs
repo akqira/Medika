@@ -1,15 +1,33 @@
 using FastEndpoints;
 using FastEndpoints.Swagger;
+using Medika.Api;
 using Medika.Infrastructure;
 using Medika.Infrastructure.Auth;
 using Medika.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+builder.Services.AddRateLimiter(opts =>
+{
+    opts.AddFixedWindowLimiter("login", o =>
+    {
+        o.PermitLimit = 5;
+        o.Window = TimeSpan.FromMinutes(1);
+        o.QueueLimit = 0;
+        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+    opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.Section).Get<JwtSettings>()!;
 builder.Services
@@ -56,9 +74,11 @@ using (var scope = app.Services.CreateScope())
     await MongoDbInitializer.InitializeAsync(ctx);
 }
 
+app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.UseFastEndpoints(c =>
 {

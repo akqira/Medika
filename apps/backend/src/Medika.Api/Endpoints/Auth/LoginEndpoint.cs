@@ -9,6 +9,7 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
     {
         Post("/api/auth/login");
         AllowAnonymous();
+        EnableRateLimiting("login");
         Summary(s => s.Summary = "Authenticate and receive a JWT token");
     }
 
