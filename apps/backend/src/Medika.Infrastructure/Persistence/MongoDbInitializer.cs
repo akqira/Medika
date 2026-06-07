@@ -21,6 +21,27 @@ public static class MongoDbInitializer
         await CreateAuditLogIndexesAsync(ctx);
     }
 
+    public static async Task SeedAsync(MongoContext ctx)
+    {
+        var anyDoctor = await ctx.Users
+            .Find(u => u.Role == Role.Doctor)
+            .AnyAsync();
+
+        if (anyDoctor) return;
+
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword("Doctor@123");
+        var doctor = User.Create(
+            email: "kader.kebir@gmail.com",
+            passwordHash: passwordHash,
+            firstName: "Abdelkader",
+            lastName: "Kebir",
+            role: Role.Doctor,
+            specialty: "Médecine générale",
+            orderNumber: "RPPS-12345678");
+
+        await ctx.Users.InsertOneAsync(doctor);
+    }
+
     private static async Task CreatePatientIndexesAsync(MongoContext ctx)
     {
         var col = ctx.Patients;

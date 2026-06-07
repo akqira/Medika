@@ -72,6 +72,7 @@ using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<MongoContext>();
     await MongoDbInitializer.InitializeAsync(ctx);
+    await MongoDbInitializer.SeedAsync(ctx);
 }
 
 app.UseExceptionHandler();

@@ -25,6 +25,7 @@
 		"vite-plugin-mkcert": "^2.1.0"
 	},
 	"dependencies": {
+		"@fontsource/dm-sans": "^5.2.8",
 		"bits-ui": "^2.18.1"
 	}
 }
