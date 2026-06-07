@@ -1,14 +1,34 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import type { AppointmentSlot } from '$lib/types/api';
 	import Badge from '$lib/components/Badge.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import BookingModal from './BookingModal.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let selectedAppt = $state<AppointmentSlot | null>(null);
+	let appointments = $state<AppointmentSlot[]>(data.appointments);
+	let showBookingModal = $state(false);
 
-	$effect(() => { data.date; selectedAppt = null; });
+	// Keep local appointments in sync with server data
+	$effect(() => {
+		appointments = data.appointments;
+		selectedAppt = null;
+	});
+
+	// Status action state
+	let actionLoading  = $state<string | null>(null); // 'confirm' | 'no-show' | 'cancel'
+	let cancelReason   = $state('');
+	let showCancelForm = $state(false);
+
+	$effect(() => {
+		if (!selectedAppt) {
+			showCancelForm = false;
+			cancelReason   = '';
+		}
+	});
 
 	const STATUS_LABEL: Record<string, string> = {
 		Confirmed: 'confirmé', InProgress: 'en cours', Pending: 'en attente',
@@ -16,12 +36,21 @@
 	};
 
 	const STATUS_COLOR: Record<string, string> = {
-		Confirmed:  '#059669',
+		Confirmed:  'var(--success)',
 		InProgress: 'var(--primary)',
-		Pending:    '#D97706',
-		Completed:  '#D1D5DB',
-		Cancelled:  '#DC2626',
-		NoShow:     '#DC2626',
+		Pending:    'var(--warning)',
+		Completed:  'var(--primary)',
+		Cancelled:  'var(--danger)',
+		NoShow:     'var(--text-muted)',
+	};
+
+	const STATUS_BG: Record<string, string> = {
+		Confirmed:  'var(--success-light)',
+		InProgress: 'var(--primary-50)',
+		Pending:    'var(--warning-light)',
+		Completed:  'var(--primary-50)',
+		Cancelled:  'var(--danger-light)',
+		NoShow:     'var(--border)',
 	};
 
 	const AVATAR: Record<string, { bg: string; color: string }> = {
@@ -30,7 +59,7 @@
 		Pending:    { bg: 'var(--warning-light)', color: 'var(--warning)' },
 		Completed:  { bg: '#F3F4F6', color: '#6B7280' },
 		Cancelled:  { bg: 'var(--danger-light)', color: 'var(--danger)' },
-		NoShow:     { bg: 'var(--danger-light)', color: 'var(--danger)' },
+		NoShow:     { bg: '#F3F4F6', color: 'var(--text-muted)' },
 	};
 
 	const DAY_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -49,7 +78,7 @@
 				dayShort: DAY_SHORT[day.getDay()],
 				num: day.getDate(),
 				isSelected: iso === data.date,
-				count: iso === data.date ? (data.appointments.length as number | null) : null,
+				count: iso === data.date ? (appointments.length as number | null) : null,
 			};
 		});
 	});
@@ -88,7 +117,7 @@
 	const SLOT_H = 52;
 	const START_MIN = 8 * 60;
 	const END_MIN   = 18 * 60;
-	const TOTAL_SLOTS = (END_MIN - START_MIN) / 30; // 20
+	const TOTAL_SLOTS = (END_MIN - START_MIN) / 30;
 
 	const timeLines = Array.from({ length: TOTAL_SLOTS + 1 }, (_, i) => {
 		const total = START_MIN + i * 30;
@@ -108,7 +137,64 @@
 	function initials(name: string) {
 		return name.split(' ').map(n => n[0] ?? '').join('').slice(0, 2).toUpperCase();
 	}
+
+	// Status action helpers
+	function updateLocalStatus(id: string, status: AppointmentSlot['status']) {
+		appointments = appointments.map(a => a.id === id ? { ...a, status } : a);
+		if (selectedAppt?.id === id) {
+			selectedAppt = { ...selectedAppt, status };
+		}
+	}
+
+	async function confirmAppt(id: string) {
+		actionLoading = 'confirm';
+		try {
+			const res = await fetch(`/api/appointments/${id}/confirm`, { method: 'PATCH' });
+			if (res.ok) updateLocalStatus(id, 'Confirmed');
+		} finally {
+			actionLoading = null;
+		}
+	}
+
+	async function noShowAppt(id: string) {
+		actionLoading = 'no-show';
+		try {
+			const res = await fetch(`/api/appointments/${id}/no-show`, { method: 'PATCH' });
+			if (res.ok) updateLocalStatus(id, 'NoShow');
+		} finally {
+			actionLoading = null;
+		}
+	}
+
+	async function cancelAppt(id: string) {
+		actionLoading = 'cancel';
+		try {
+			const res = await fetch(`/api/appointments/${id}/cancel`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ reason: cancelReason }),
+			});
+			if (res.ok) {
+				updateLocalStatus(id, 'Cancelled');
+				showCancelForm = false;
+				cancelReason = '';
+			}
+		} finally {
+			actionLoading = null;
+		}
+	}
+
+	function handleBooked() {
+		showBookingModal = false;
+		invalidateAll();
+	}
 </script>
+
+<BookingModal
+	bind:open={showBookingModal}
+	defaultDate={data.date}
+	onbooked={handleBooked}
+/>
 
 <div style="display:flex;flex-direction:column;height:calc(100vh - 58px);overflow:hidden;background:var(--bg)">
 
@@ -132,11 +218,14 @@
 
 			<div style="flex:1"></div>
 
-			<a href="/consultation"
-				style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-size:13.5px;font-weight:600;flex-shrink:0">
+			<button
+				type="button"
+				onclick={() => showBookingModal = true}
+				style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--primary);color:white;border:none;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;flex-shrink:0;cursor:pointer"
+			>
 				<Icon name="plus" size={14} color="white" />
 				Nouveau rendez-vous
-			</a>
+			</button>
 		</div>
 
 		<!-- Week strip -->
@@ -187,7 +276,7 @@
 					</div>
 				{/each}
 
-				{#each data.appointments as appt}
+				{#each appointments as appt}
 					{@const pos = apptPos(appt)}
 					{@const av  = AVATAR[appt.status]  ?? AVATAR.Completed}
 					{@const col = STATUS_COLOR[appt.status] ?? '#D1D5DB'}
@@ -225,7 +314,7 @@
 					</button>
 				{/each}
 
-				{#if data.appointments.length === 0}
+				{#if appointments.length === 0}
 					<div style="position:absolute;top:80px;left:64px;right:0;
 						display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text-muted)">
 						<Icon name="calendar" size={36} color="var(--border-strong)" />
@@ -294,7 +383,7 @@
 					{#if selectedAppt.patientAllergies.length > 0}
 						<div style="background:var(--danger-light);border-radius:8px;padding:12px;margin-bottom:14px">
 							<div style="font-size:10.5px;font-weight:600;color:var(--danger);
-								text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">⚠ Allergies</div>
+								text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Allergies</div>
 							<div style="display:flex;flex-wrap:wrap;gap:4px">
 								{#each selectedAppt.patientAllergies as a}
 									<span style="background:white;color:var(--danger);font-size:11.5px;
@@ -304,7 +393,75 @@
 						</div>
 					{/if}
 
-					<a href="/consultation"
+					<!-- Status action buttons -->
+					<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+						{#if selectedAppt.status === 'Pending'}
+							<button
+								type="button"
+								disabled={actionLoading !== null}
+								onclick={() => confirmAppt(selectedAppt!.id)}
+								style="display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;background:var(--success-light);color:var(--success);border:1px solid var(--success);border-radius:7px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;opacity:{actionLoading === 'confirm' ? 0.6 : 1}"
+							>
+								<Icon name="check" size={14} color="var(--success)" />
+								{actionLoading === 'confirm' ? 'Confirmation…' : 'Confirmer'}
+							</button>
+						{/if}
+
+						{#if selectedAppt.status === 'Pending' || selectedAppt.status === 'Confirmed'}
+							<button
+								type="button"
+								disabled={actionLoading !== null}
+								onclick={() => noShowAppt(selectedAppt!.id)}
+								style="display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;background:var(--bg);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;opacity:{actionLoading === 'no-show' ? 0.6 : 1}"
+							>
+								<Icon name="x" size={14} color="var(--text-muted)" />
+								{actionLoading === 'no-show' ? 'Enregistrement…' : 'Patient absent'}
+							</button>
+						{/if}
+
+						{#if selectedAppt.status !== 'Completed' && selectedAppt.status !== 'Cancelled'}
+							{#if showCancelForm}
+								<div style="background:var(--danger-light);border:1px solid #FECACA;border-radius:8px;padding:12px">
+									<div style="font-size:12px;font-weight:600;color:var(--danger);margin-bottom:8px">Motif d'annulation</div>
+									<input
+										type="text"
+										bind:value={cancelReason}
+										placeholder="Motif (optionnel)…"
+										class="mk-input"
+										style="margin-bottom:8px;font-size:13px"
+									/>
+									<div style="display:flex;gap:8px">
+										<button
+											type="button"
+											onclick={() => showCancelForm = false}
+											style="flex:1;padding:7px;background:white;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12.5px;cursor:pointer"
+										>
+											Annuler
+										</button>
+										<button
+											type="button"
+											disabled={actionLoading !== null}
+											onclick={() => cancelAppt(selectedAppt!.id)}
+											style="flex:2;padding:7px;background:var(--danger);color:white;border:none;border-radius:6px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;opacity:{actionLoading === 'cancel' ? 0.6 : 1}"
+										>
+											{actionLoading === 'cancel' ? 'Annulation…' : 'Confirmer l\'annulation'}
+										</button>
+									</div>
+								</div>
+							{:else}
+								<button
+									type="button"
+									onclick={() => showCancelForm = true}
+									style="display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;background:var(--danger-light);color:var(--danger);border:1px solid #FECACA;border-radius:7px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer"
+								>
+									<Icon name="x" size={14} color="var(--danger)" />
+									Annuler le rendez-vous
+								</button>
+							{/if}
+						{/if}
+					</div>
+
+					<a href="/consultation?appointmentId={selectedAppt.id}"
 						style="display:flex;align-items:center;justify-content:center;gap:7px;
 							padding:11px;background:var(--primary);color:white;border-radius:8px;
 							text-decoration:none;font-weight:600;font-size:14px">
@@ -318,12 +475,12 @@
 				<div style="padding:16px 20px;border-bottom:1px solid var(--border)">
 					<h3 style="font-size:13.5px;font-weight:700;color:var(--text)">RDV du {dateLabel}</h3>
 					<p style="font-size:12px;color:var(--text-muted);margin-top:2px">
-						{data.appointments.length} rendez-vous programmés
+						{appointments.length} rendez-vous programmés
 					</p>
 				</div>
 
 				<div style="flex:1;overflow-y:auto">
-					{#if data.appointments.length === 0}
+					{#if appointments.length === 0}
 						<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
 							height:180px;color:var(--text-muted);gap:10px">
 							<Icon name="calendar" size={34} color="var(--border-strong)" />
@@ -332,7 +489,7 @@
 							</p>
 						</div>
 					{:else}
-						{#each data.appointments as appt}
+						{#each appointments as appt}
 							{@const av = AVATAR[appt.status] ?? AVATAR.Completed}
 							<button
 								onclick={() => selectedAppt = appt}
@@ -364,13 +521,16 @@
 				</div>
 
 				<div style="padding:14px 20px;border-top:1px solid var(--border)">
-					<a href="/consultation"
-						style="display:flex;align-items:center;justify-content:center;gap:7px;
-							padding:10px;background:var(--primary);color:white;border-radius:8px;
-							text-decoration:none;font-size:13.5px;font-weight:600">
+					<button
+						type="button"
+						onclick={() => showBookingModal = true}
+						style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+							padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;
+							font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer"
+					>
 						<Icon name="plus" size={14} color="white" />
 						Nouveau rendez-vous
-					</a>
+					</button>
 				</div>
 			{/if}
 		</div>
