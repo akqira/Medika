@@ -15,7 +15,8 @@
 	// Form fields
 	let patientSearch   = $state('');
 	let selectedPatient = $state<PatientSummary | null>(null);
-	let date            = $state(defaultDate || new Date().toISOString().split('T')[0]);
+	let date            = $state('');
+	$effect(() => { date = defaultDate || new Date().toISOString().split('T')[0]; });
 	let time            = $state('08:00');
 	let duration        = $state('30');
 	let apptType        = $state('');

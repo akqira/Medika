@@ -9,7 +9,7 @@
 	let { data }: { data: PageData } = $props();
 
 	let selectedAppt = $state<AppointmentSlot | null>(null);
-	let appointments = $state<AppointmentSlot[]>(data.appointments);
+	let appointments = $state<AppointmentSlot[]>([]);
 	let showBookingModal = $state(false);
 
 	// Keep local appointments in sync with server data
