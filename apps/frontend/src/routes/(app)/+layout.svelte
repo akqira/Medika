@@ -131,6 +131,7 @@
 					<div style="padding:5px;border-top:1px solid var(--border)">
 						<a
 							href="/logout"
+							data-sveltekit-preload-data="off"
 							onclick={() => showUserMenu = false}
 							style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;text-decoration:none;color:var(--danger);font-size:13.5px;font-weight:500"
 						>
