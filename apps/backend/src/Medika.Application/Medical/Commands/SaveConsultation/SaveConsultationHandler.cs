@@ -4,6 +4,7 @@ using Medika.Domain.Finance;
 using Medika.Domain.Medical;
 using Medika.Domain.Patients;
 using Medika.Domain.Scheduling;
+using Microsoft.Extensions.Logging;
 
 namespace Medika.Application.Medical.Commands.SaveConsultation;
 
@@ -13,22 +14,42 @@ public class SaveConsultationHandler(
     IInvoiceRepository invoices,
     IPatientRepository patients,
     ICurrentUserService currentUser,
-    IAuditService audit) : ICommandHandler<SaveConsultationCommand, string>
+    IAuditService audit,
+    ILogger<SaveConsultationHandler> logger) : ICommandHandler<SaveConsultationCommand, string>
 {
     public async Task<string> ExecuteAsync(SaveConsultationCommand cmd, CancellationToken ct)
     {
-        var consultation = Consultation.Start(
-            cmd.PatientId, currentUser.UserId,
-            cmd.Reason, cmd.AppointmentId);
+        // Upsert semantics: when not finalizing, look for an existing draft for same patient+doctor today
+        Consultation? existing = null;
+        if (!cmd.Finalize)
+            existing = await consultations.GetDraftAsync(cmd.PatientId, currentUser.UserId, ct);
+
+        Consultation consultation;
+        bool isNew;
+
+        if (existing is not null)
+        {
+            consultation = existing;
+            isNew = false;
+        }
+        else
+        {
+            consultation = Consultation.Start(
+                cmd.PatientId, currentUser.UserId,
+                cmd.Reason, cmd.AppointmentId);
+            isNew = true;
+        }
 
         var vitalSigns = cmd.VitalSigns is { } vs
-            ? new VitalSigns(vs.BloodPressure, vs.PulseRate, vs.Weight, vs.Temperature, vs.SpO2)
+            ? new VitalSigns(vs.BloodPressure, vs.PulseRate, vs.Weight, vs.Temperature, vs.SpO2, vs.Height)
             : null;
 
         consultation.SetClinicalData(cmd.ClinicalExam, cmd.Diagnosis, cmd.Notes, vitalSigns);
 
+        consultation.ClearPrescription();
         foreach (var line in cmd.Prescription)
-            consultation.AddPrescriptionLine(new PrescriptionLine(line.Medication, line.Dosage, line.Duration, line.Quantity));
+            consultation.AddPrescriptionLine(
+                new PrescriptionLine(line.Medication, line.Dosage, line.Duration, line.Quantity, line.Frequency));
 
         consultation.SetTariff(cmd.Tariff);
 
@@ -38,9 +59,25 @@ public class SaveConsultationHandler(
 
             if (cmd.AppointmentId is not null)
             {
-                var appt = await appointments.GetByIdAsync(AppointmentId.From(cmd.AppointmentId), ct);
-                appt?.Complete(consultation.Id.ToString());
-                if (appt is not null) await appointments.UpdateAsync(appt, ct);
+                try
+                {
+                    var appt = await appointments.GetByIdAsync(AppointmentId.From(cmd.AppointmentId), ct);
+                    if (appt is not null)
+                    {
+                        appt.Complete(consultation.Id.ToString());
+                        await appointments.UpdateAsync(appt, ct);
+                    }
+                    else
+                    {
+                        logger.LogWarning("Appointment {AppointmentId} not found when finalizing consultation {ConsultationId}.",
+                            cmd.AppointmentId, consultation.Id);
+                    }
+                }
+                catch (InvalidOperationException ex)
+                {
+                    logger.LogWarning(ex, "Appointment status transition failed for {AppointmentId} while finalizing consultation {ConsultationId}.",
+                        cmd.AppointmentId, consultation.Id);
+                }
             }
 
             var invoiceNumber = await invoices.GenerateNumberAsync(ct);
@@ -54,7 +91,11 @@ public class SaveConsultationHandler(
             if (patient is not null) await patients.UpdateAsync(patient, ct);
         }
 
-        await consultations.AddAsync(consultation, ct);
+        if (isNew)
+            await consultations.AddAsync(consultation, ct);
+        else
+            await consultations.UpdateAsync(consultation, ct);
+
         await audit.LogAsync("SaveConsultation", "Consultation", consultation.Id.ToString(),
             after: new { consultation.PatientId, consultation.Diagnosis, Finalized = cmd.Finalize }, ct: ct);
 

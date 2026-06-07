@@ -16,8 +16,8 @@ public record SaveConsultationCommand(
 
 public record VitalSignsDto(
     string? BloodPressure, int? PulseRate,
-    decimal? Weight, decimal? Temperature, int? SpO2);
+    decimal? Weight, decimal? Temperature, int? SpO2, decimal? Height);
 
 public record PrescriptionLineDto(
     string Medication, string Dosage,
-    string? Duration, int Quantity);
+    string? Duration, int Quantity, string? Frequency = null);
