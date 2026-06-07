@@ -42,8 +42,14 @@
 		<!-- Header + search -->
 		<div style="padding:16px;border-bottom:1px solid var(--border)">
 			<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-				<span style="font-size:14.5px;font-weight:600">Patients</span>
-				<span style="font-size:12px;color:var(--text-muted)">{data.result.totalCount} au total</span>
+				<div style="display:flex;align-items:center;gap:8px">
+					<span style="font-size:14.5px;font-weight:600">Patients</span>
+					<span style="font-size:12px;color:var(--text-muted)">· {data.result.totalCount} au total</span>
+				</div>
+				<a href="/patients/new" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--primary);color:white;border-radius:7px;text-decoration:none;font-size:12.5px;font-weight:600">
+					<Icon name="plus" size={13} color="white" />
+					Nouveau
+				</a>
 			</div>
 			<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 11px">
 				<Icon name="search" size={14} color="var(--text-muted)" />

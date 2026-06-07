@@ -6,13 +6,21 @@
 	let { form }: { form: ActionData } = $props();
 	let loading = $state(false);
 	let showPassword = $state(false);
+	let rememberMe = $state(true);
 
 	const FEATURES = [
-		'Dossiers patients complets et sécurisés',
-		'Agenda intelligent avec vue semaine',
-		'Ordonnances et impression en 1 clic',
-		'Tableau de bord financier en temps réel',
+		{ icon: 'calendar', label: 'Agenda intelligent & gestion des RDV' },
+		{ icon: 'users', label: 'Dossiers patients complets & sécurisés' },
+		{ icon: 'clipboard', label: 'Consultations, prescriptions & ordonnances' },
+		{ icon: 'barchart', label: 'Suivi financier du cabinet en temps réel' },
 	];
+
+	const STATS = [
+		{ value: '2 000+', label: 'Médecins' },
+		{ value: '48', label: 'Wilayas' },
+		{ value: '99.9%', label: 'Disponibilité' },
+	];
+ 
 </script>
 
 <div style="min-height:100vh;display:flex;font-family:'DM Sans',-apple-system,sans-serif">
@@ -20,10 +28,11 @@
 	<!-- Left panel -->
 	<div style="width:42%;background:#1C2B3A;display:flex;flex-direction:column;padding:44px 48px;position:relative;overflow:hidden;flex-shrink:0">
 
-		<!-- Decorative background circle -->
+		<!-- Decorative background circles -->
 		<div style="position:absolute;bottom:-120px;right:-120px;width:400px;height:400px;border-radius:50%;border:1px solid rgba(255,255,255,0.04)"></div>
 		<div style="position:absolute;bottom:-80px;right:-80px;width:280px;height:280px;border-radius:50%;border:1px solid rgba(255,255,255,0.04)"></div>
 		<div style="position:absolute;top:80px;left:-60px;width:180px;height:180px;border-radius:50%;background:rgba(15,118,110,0.08)"></div>
+		<div style="position:absolute;top:140px;right:90px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.04)"></div>
 
 		<!-- Logo -->
 		<div style="display:flex;align-items:center;gap:10px;position:relative">
@@ -31,40 +40,48 @@
 				<Icon name="activity" size={18} color="white" />
 			</div>
 			<span style="color:white;font-size:19px;font-weight:700;letter-spacing:-0.3px">
-				Medi<span style="color:#5EE7D0">Ka</span>
+				MediKa
 			</span>
 		</div>
 
 		<!-- Main copy -->
 		<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:60px 0 40px;position:relative">
-			<p style="color:#5EE7D0;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px">
-				Logiciel médical
-			</p>
-			<h1 style="color:white;font-size:30px;font-weight:700;line-height:1.25;letter-spacing:-0.5px;margin-bottom:16px">
-				Gérez votre cabinet<br>en toute simplicité.
+
+			<!-- Badge -->
+			<div style="display:inline-flex;align-items:center;gap:7px;align-self:flex-start;padding:6px 13px;background:rgba(15,118,110,0.18);border-radius:20px;margin-bottom:22px">
+				<span style="width:6px;height:6px;border-radius:50%;background:#5EE7D0"></span>
+				<span style="color:#5EE7D0;font-size:12.5px;font-weight:500">Solution cloud 100% algérienne</span>
+			</div>
+
+			<h1 style="color:white;font-size:32px;font-weight:700;line-height:1.25;letter-spacing:-0.5px;margin-bottom:16px">
+				Gérez votre cabinet<br><span style="color:#5EE7D0">simplement.</span>
 			</h1>
-			<p style="color:rgba(255,255,255,0.45);font-size:14.5px;line-height:1.65;margin-bottom:40px">
-				Une solution pensée pour les médecins<br>
-				exerçant en cabinet indépendant.
+			<p style="color:rgba(255,255,255,0.5);font-size:14.5px;line-height:1.65;margin-bottom:36px;max-width:340px">
+				MediKa centralise agenda, dossiers patients, consultations et finances dans une seule interface fluide.
 			</p>
 
 			<!-- Features -->
-			<div style="display:flex;flex-direction:column;gap:11px">
+			<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:48px">
 				{#each FEATURES as feat}
-					<div style="display:flex;align-items:center;gap:11px">
-						<div style="width:20px;height:20px;border-radius:50%;background:rgba(94,231,208,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-							<Icon name="check" size={10} color="#5EE7D0" />
+					<div style="display:flex;align-items:center;gap:13px">
+						<div style="width:34px;height:34px;border-radius:9px;background:rgba(94,231,208,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+							<Icon name={feat.icon} size={16} color="#5EE7D0" />
 						</div>
-						<span style="color:rgba(255,255,255,0.65);font-size:13.5px">{feat}</span>
+						<span style="color:rgba(255,255,255,0.7);font-size:14px">{feat.label}</span>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Stats -->
+			<div style="display:flex;gap:36px">
+				{#each STATS as stat}
+					<div>
+						<p style="color:white;font-size:21px;font-weight:700;letter-spacing:-0.3px;margin-bottom:2px">{stat.value}</p>
+						<p style="color:rgba(255,255,255,0.4);font-size:12.5px">{stat.label}</p>
 					</div>
 				{/each}
 			</div>
 		</div>
-
-		<!-- Footer -->
-		<p style="color:rgba(255,255,255,0.2);font-size:12px;position:relative">
-			© 2025 MediKa · Données médicales sécurisées
-		</p>
 	</div>
 
 	<!-- Right panel -->
@@ -72,12 +89,13 @@
 		<div style="width:100%;max-width:380px">
 
 			<!-- Form header -->
-			<div style="margin-bottom:36px">
+			<div style="margin-bottom:28px">
 				<h2 style="font-size:26px;font-weight:700;color:#1A1D23;letter-spacing:-0.5px">Connexion</h2>
 				<p style="font-size:14.5px;color:#6B7282;margin-top:7px">
-					Accédez à votre espace médecin
+					Accédez à votre espace cabinet
 				</p>
 			</div>
+
 
 			<!-- Error -->
 			{#if form?.error}
@@ -98,12 +116,12 @@
 					};
 				}}
 			>
-				<div style="display:flex;flex-direction:column;gap:18px;margin-bottom:26px">
+				<div style="display:flex;flex-direction:column;gap:18px;margin-bottom:18px">
 
 					<!-- Email -->
 					<div>
 						<label for="email" style="display:block;font-size:13px;font-weight:500;color:#1A1D23;margin-bottom:7px">
-							Email professionnel
+							Adresse e-mail
 						</label>
 						<div style="position:relative">
 							<div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none">
@@ -115,7 +133,6 @@
 								type="email"
 								required
 								autocomplete="email"
-								placeholder="docteur@exemple.com"
 								class="mk-input login-field"
 								style="padding-left:38px"
 							/>
@@ -124,9 +141,14 @@
 
 					<!-- Password -->
 					<div>
-						<label for="password" style="display:block;font-size:13px;font-weight:500;color:#1A1D23;margin-bottom:7px">
-							Mot de passe
-						</label>
+						<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+							<label for="password" style="font-size:13px;font-weight:500;color:#1A1D23">
+								Mot de passe
+							</label>
+							<a href="#" style="font-size:12.5px;color:#0F766E;text-decoration:none;font-weight:500">
+								Mot de passe oublié ?
+							</a>
+						</div>
 						<div style="position:relative">
 							<div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none">
 								<Icon name={showPassword ? 'eyeOff' : 'eye'} size={15} color="#9CA3AF" />
@@ -151,6 +173,17 @@
 						</div>
 					</div>
 
+					<!-- Remember me -->
+					<label style="display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none">
+						<input
+							type="checkbox"
+							name="remember"
+							bind:checked={rememberMe}
+							style="width:16px;height:16px;accent-color:#0F766E;cursor:pointer"
+						/>
+						<span style="font-size:13.5px;color:#4B5563">Se souvenir de moi</span>
+					</label>
+
 				</div>
 
 				<!-- Submit -->
@@ -172,16 +205,15 @@
 						</svg>
 						Connexion en cours…
 					{:else}
+						<Icon name="checkCircle" size={15} color="white" />
 						Se connecter
 					{/if}
 				</button>
 			</form>
 
-			<div style="text-align:center;margin-top:20px">
-				<a href="#" style="font-size:13.5px;color:#6B7282;text-decoration:none">
-					Mot de passe oublié ?
-				</a>
-			</div>
+			<p style="text-align:center;margin-top:20px;font-size:12.5px;color:#9CA3AF;line-height:1.6">
+				En vous connectant, vous acceptez nos <a href="#" style="color:#6B7282;text-decoration:underline">Conditions d'utilisation</a> et notre <a href="#" style="color:#6B7282;text-decoration:underline">Politique de confidentialité</a>.
+			</p>
 
 		</div>
 	</div>

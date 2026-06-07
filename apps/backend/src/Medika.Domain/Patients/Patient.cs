@@ -21,6 +21,13 @@ public sealed class Patient : AggregateRoot<PatientId>
     public string? DoctorId { get; private set; }
     public DateTime? LastVisitAt { get; private set; }
 
+    public string? Wilaya { get; private set; }
+    public string? EmergencyContactName { get; private set; }
+    public string? EmergencyContactPhone { get; private set; }
+    public string? InsuranceProvider { get; private set; }       // "CNAS" | "CASNOS" | "Military" | "None"
+    public string? MutualInsurance { get; private set; }
+    public string? CurrentTreatment { get; private set; }
+
     private readonly List<string> _allergies = [];
     private readonly List<string> _medicalHistory = [];
 
@@ -31,7 +38,11 @@ public sealed class Patient : AggregateRoot<PatientId>
         DateOnly dateOfBirth, string gender,
         string phone, string? email = null,
         string? address = null, string? nss = null,
-        string? bloodGroup = null, string? doctorId = null)
+        string? bloodGroup = null, string? doctorId = null,
+        string? wilaya = null,
+        string? emergencyContactName = null, string? emergencyContactPhone = null,
+        string? insuranceProvider = null, string? mutualInsurance = null,
+        string? currentTreatment = null)
     {
         var patient = new Patient
         {
@@ -46,6 +57,12 @@ public sealed class Patient : AggregateRoot<PatientId>
             Nss = nss,
             BloodGroup = bloodGroup is not null ? Patients.BloodGroup.From(bloodGroup) : null,
             DoctorId = doctorId,
+            Wilaya = wilaya,
+            EmergencyContactName = emergencyContactName,
+            EmergencyContactPhone = emergencyContactPhone,
+            InsuranceProvider = insuranceProvider,
+            MutualInsurance = mutualInsurance,
+            CurrentTreatment = currentTreatment,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };

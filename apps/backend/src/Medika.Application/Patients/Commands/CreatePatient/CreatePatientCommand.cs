@@ -12,4 +12,10 @@ public record CreatePatientCommand(
     string? Nss = null,
     string? BloodGroup = null,
     List<string>? Allergies = null,
-    List<string>? MedicalHistory = null) : ICommand<string>;
+    List<string>? MedicalHistory = null,
+    string? Wilaya = null,
+    string? EmergencyContactName = null,
+    string? EmergencyContactPhone = null,
+    string? InsuranceProvider = null,   // "CNAS" | "CASNOS" | "Military" | "None"
+    string? MutualInsurance = null,
+    string? CurrentTreatment = null) : ICommand<string>;

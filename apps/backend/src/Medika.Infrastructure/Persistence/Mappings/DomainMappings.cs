@@ -63,8 +63,9 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapMember(p => p.Allergies).SetElementName("allergies");
-            cm.MapMember(p => p.MedicalHistory).SetElementName("medicalHistory");
+            // Map private backing fields so MongoDB can round-trip the lists
+            cm.MapField("_allergies").SetElementName("allergies");
+            cm.MapField("_medicalHistory").SetElementName("medicalHistory");
         });
     }
 

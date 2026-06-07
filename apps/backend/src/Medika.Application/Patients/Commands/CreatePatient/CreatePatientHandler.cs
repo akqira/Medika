@@ -15,7 +15,13 @@ public class CreatePatientHandler(
         var patient = Patient.Create(
             cmd.FirstName, cmd.LastName, dob, cmd.Gender,
             cmd.Phone, cmd.Email, cmd.Address, cmd.Nss,
-            cmd.BloodGroup, doctorId: currentUser.UserId);
+            cmd.BloodGroup, doctorId: currentUser.UserId,
+            wilaya: cmd.Wilaya,
+            emergencyContactName: cmd.EmergencyContactName,
+            emergencyContactPhone: cmd.EmergencyContactPhone,
+            insuranceProvider: cmd.InsuranceProvider,
+            mutualInsurance: cmd.MutualInsurance,
+            currentTreatment: cmd.CurrentTreatment);
 
         foreach (var allergy in cmd.Allergies ?? [])
             patient.AddAllergy(allergy);
