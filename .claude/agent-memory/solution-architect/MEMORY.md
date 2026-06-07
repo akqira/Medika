@@ -1,0 +1,1 @@
+- [Cabinet domain gap](project_cabinet_domain_gap.md) — Cabinet fields (name/address/city/wilaya/phone) exist in profile UI but not in the User aggregate — must be added to User domain model
