@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import { clearToken, clearUser } from '$lib/server/session';
-import type { PageServerLoad } from './$types';
+import type { RequestHandler } from './$types';
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const GET: RequestHandler = ({ cookies }) => {
 	clearToken(cookies);
 	clearUser(cookies);
 	redirect(302, '/login');
