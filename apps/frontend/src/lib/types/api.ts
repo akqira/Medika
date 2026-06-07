@@ -44,3 +44,59 @@ export interface FinancialSummary {
 	monthlyTrend: { month: string; amount: number }[];
 	breakdownByType: { label: string; amount: number; percentage: number }[];
 }
+
+export interface PrescriptionLine {
+	medication: string;
+	dosage: string;
+	frequency: string;
+	duration: string;
+	quantity: number;
+}
+
+export interface VitalSigns {
+	bloodPressure?: string;
+	pulseRate?: string;
+	temperature?: string;
+	weight?: string;
+	height?: string;
+	spO2?: string;
+}
+
+export interface ConsultationSummary {
+	id: string;
+	patientId: string;
+	appointmentId?: string;
+	date: string;
+	reason: string;
+	diagnosis?: string;
+	tariff: number;
+	finalized: boolean;
+	createdAt: string;
+}
+
+export interface ConsultationDetail extends ConsultationSummary {
+	clinicalExam?: string;
+	notes?: string;
+	vitalSigns?: VitalSigns;
+	prescription: PrescriptionLine[];
+}
+
+export interface AppointmentBooking {
+	id: string;
+	patientId: string;
+	patientName: string;
+	date: string;
+	time: string;
+	durationMinutes: number;
+	type: string;
+	reason?: string;
+	status: 'Pending' | 'Confirmed' | 'InProgress' | 'Completed' | 'Cancelled' | 'NoShow';
+}
+
+export interface Charge {
+	id: string;
+	category: string;
+	description: string;
+	amount: number;
+	date: string;
+}

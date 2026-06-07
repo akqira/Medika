@@ -34,9 +34,18 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		cabinetPhone:   '',
 	};
 
-	const profile = await api
-		.get<DoctorProfile>('/api/profile', token)
-		.catch(() => fallback);
+	// Try to fetch the real profile; fall back gracefully if backend unavailable.
+	// Do NOT swallow auth errors — propagate 401/403 so the layout redirect handles them.
+	let profile = fallback;
+	try {
+		profile = await api.get<DoctorProfile>('/api/profile', token);
+	} catch (e: unknown) {
+		// Re-throw SvelteKit HTTP errors (401, 403, etc.) — don't swallow them.
+		if (e && typeof e === 'object' && 'status' in e) {
+			throw e;
+		}
+		// Network / 5xx: use fallback so the page still renders.
+	}
 
 	return { profile };
 };
@@ -56,8 +65,10 @@ export const actions: Actions = {
 				rppsNumber:     data.get('rppsNumber'),
 			}, token);
 			return { tab: 'cabinet', success: 'Informations du cabinet mises à jour.' };
-		} catch {
-			return fail(500, { tab: 'cabinet', error: 'Erreur lors de la sauvegarde.' });
+		} catch (e: unknown) {
+			// Propagate SvelteKit errors (401, 403)
+			if (e && typeof e === 'object' && 'status' in e) throw e;
+			return fail(500, { tab: 'cabinet', error: 'Erreur lors de la sauvegarde. Veuillez réessayer.' });
 		}
 	},
 
@@ -66,13 +77,25 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const firstName = data.get('firstName')?.toString() ?? '';
 		const lastName  = data.get('lastName')?.toString() ?? '';
+		const email     = data.get('email')?.toString() ?? '';
+
 		try {
-			await api.patch('/api/profile/account', { firstName, lastName, email: data.get('email') }, token);
+			await api.patch('/api/profile/account', { firstName, lastName, email }, token);
 			const user = getUser(cookies);
 			if (user) setUser(cookies, { ...user, fullName: `${firstName} ${lastName}`.trim() });
 			return { tab: 'compte', success: 'Informations du compte mises à jour.' };
-		} catch {
-			return fail(500, { tab: 'compte', error: 'Erreur lors de la sauvegarde.' });
+		} catch (e: unknown) {
+			// Propagate SvelteKit errors (401, 403)
+			if (e && typeof e === 'object' && 'status' in e) {
+				const httpErr = e as { status: number; body?: { message?: string } };
+				if (httpErr.status === 400) {
+					// "Email already in use" or other validation from backend
+					const msg = httpErr.body?.message ?? 'Cette adresse email est déjà utilisée.';
+					return fail(400, { tab: 'compte', error: msg });
+				}
+				throw e;
+			}
+			return fail(500, { tab: 'compte', error: 'Erreur lors de la sauvegarde. Veuillez réessayer.' });
 		}
 	},
 
@@ -81,15 +104,28 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const newPwd     = data.get('newPassword')?.toString() ?? '';
 		const confirmPwd = data.get('confirmPassword')?.toString() ?? '';
+
 		if (newPwd !== confirmPwd)
 			return fail(400, { tab: 'securite', error: 'Les mots de passe ne correspondent pas.' });
 		if (newPwd.length < 8)
-			return fail(400, { tab: 'securite', error: 'Minimum 8 caractères requis.' });
+			return fail(400, { tab: 'securite', error: 'Le nouveau mot de passe doit contenir au minimum 8 caractères.' });
+
 		try {
-			await api.post('/api/profile/change-password', { currentPassword: data.get('currentPassword'), newPassword: newPwd }, token);
+			await api.post('/api/profile/change-password', {
+				currentPassword: data.get('currentPassword'),
+				newPassword:     newPwd,
+			}, token);
 			return { tab: 'securite', success: 'Mot de passe modifié avec succès.' };
-		} catch {
-			return fail(400, { tab: 'securite', error: 'Mot de passe actuel incorrect.' });
+		} catch (e: unknown) {
+			// Propagate SvelteKit errors (401, 403)
+			if (e && typeof e === 'object' && 'status' in e) {
+				const httpErr = e as { status: number };
+				if (httpErr.status === 422 || httpErr.status === 400) {
+					return fail(400, { tab: 'securite', error: 'Mot de passe actuel incorrect.' });
+				}
+				throw e;
+			}
+			return fail(500, { tab: 'securite', error: 'Erreur serveur. Veuillez réessayer.' });
 		}
 	},
 };
