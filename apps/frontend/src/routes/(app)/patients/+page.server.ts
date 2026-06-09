@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 			`/api/patients?term=${encodeURIComponent(term)}&page=${page}&pageSize=20`,
 			token
 		)
-		.catch(() => empty);
+		.catch((e) => { console.error('[patients] load failed:', e); return empty; });
 
 	return { result, term, page };
 };

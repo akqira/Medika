@@ -174,9 +174,22 @@ file sealed class UserIdSerializer() : SerializerBase<UserId>
 file sealed class BloodGroupSerializer() : SerializerBase<Domain.Patients.BloodGroup>
 {
     public override Domain.Patients.BloodGroup Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
-        => Domain.Patients.BloodGroup.From(ctx.Reader.ReadString());
+    {
+        if (ctx.Reader.GetCurrentBsonType() == BsonType.Null)
+        {
+            ctx.Reader.ReadNull();
+            return null!;
+        }
+        return Domain.Patients.BloodGroup.From(ctx.Reader.ReadString());
+    }
+
     public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, Domain.Patients.BloodGroup value)
-        => ctx.Writer.WriteString(value.ToString());
+    {
+        if (value is null)
+            ctx.Writer.WriteNull();
+        else
+            ctx.Writer.WriteString(value.ToString());
+    }
 }
 
 file sealed class DateOnlySerializer() : StructSerializerBase<DateOnly>

@@ -25,7 +25,7 @@
 {#if showUserMenu}
 	<div
 		onclick={() => showUserMenu = false}
-		style="position:fixed;inset:0;z-index:250"
+		style="position:fixed;inset:0;z-index:190"
 		role="presentation"
 	></div>
 {/if}
@@ -132,6 +132,7 @@
 						<a
 							href="/logout"
 							data-sveltekit-preload-data="off"
+							data-sveltekit-reload
 							onclick={() => showUserMenu = false}
 							style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;text-decoration:none;color:var(--danger);font-size:13.5px;font-weight:500"
 						>

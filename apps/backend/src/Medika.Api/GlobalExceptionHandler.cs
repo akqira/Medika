@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Medika.Api;
 
-public class GlobalExceptionHandler : IExceptionHandler
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext ctx, Exception ex, CancellationToken ct)
     {
+        logger.LogError(ex, "Unhandled exception: {Method} {Path}", ctx.Request.Method, ctx.Request.Path);
         var (status, title) = ex switch
         {
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),

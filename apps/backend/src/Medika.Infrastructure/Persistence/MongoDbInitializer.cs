@@ -46,6 +46,10 @@ public static class MongoDbInitializer
     {
         var col = ctx.Patients;
         var builders = Builders<Patient>.IndexKeys;
+
+        // Ensure the nss index is sparse — drop the old non-sparse version if it exists
+        try { await col.Indexes.DropOneAsync("nss_1"); } catch { }
+
         await col.Indexes.CreateManyAsync([
             new CreateIndexModel<Patient>(builders.Combine(
                 builders.Ascending(p => p.LastName),

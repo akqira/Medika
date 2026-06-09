@@ -51,8 +51,10 @@ export const actions: Actions = {
 				mutualInsurance: field('mutualInsurance'),
 				currentTreatment: field('currentTreatment'),
 			}, token);
-		} catch {
-			return fail(500, { error: "Une erreur est survenue lors de la création du dossier." });
+		} catch (e) {
+			console.error('[patients/new] create failed:', e);
+			const message = e instanceof Error ? e.message : 'Une erreur est survenue lors de la création du dossier.';
+			return fail(500, { error: message });
 		}
 
 		redirect(303, `/patients?created=${created.patientId}`);

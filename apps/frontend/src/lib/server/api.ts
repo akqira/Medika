@@ -9,7 +9,7 @@ async function request<T>(
 	token?: string
 ): Promise<T> {
 	const headers: Record<string, string> = {
-		'Content-Type': 'application/json',
+		...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
 		...(token ? { Authorization: `Bearer ${token}` } : {}),
 		...(options.headers as Record<string, string>),
 	};

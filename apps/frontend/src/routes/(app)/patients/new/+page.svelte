@@ -70,6 +70,10 @@
 		{ value: 'None', label: 'Sans couverture', description: 'Patient sans assurance' },
 	];
 
+	const today = new Date();
+	const maxDate = today.toISOString().slice(0, 10);
+	const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+
 	const age = $derived.by(() => {
 		if (!dateOfBirth) return 0;
 		const dob = new Date(dateOfBirth);
@@ -83,18 +87,65 @@
 		return `${d}/${m}/${y}`;
 	}
 
+	// Latin letters, Arabic letters, spaces, hyphens, apostrophes
+	const NAME_RE = /^[\p{L}\s'\-]{2,}$/u;
+
 	function validateStep1() {
 		const e: Record<string, string> = {};
-		if (!firstName.trim()) e.firstName = 'Champ requis';
-		if (!lastName.trim()) e.lastName = 'Champ requis';
-		if (!dateOfBirth) e.dateOfBirth = 'Date de naissance requise';
+		const fn = firstName.trim();
+		const ln = lastName.trim();
+		if (!fn) {
+			e.firstName = 'Champ requis';
+		} else if (!NAME_RE.test(fn)) {
+			e.firstName = 'Lettres uniquement, 2 caractères minimum';
+		}
+		if (!ln) {
+			e.lastName = 'Champ requis';
+		} else if (!NAME_RE.test(ln)) {
+			e.lastName = 'Lettres uniquement, 2 caractères minimum';
+		}
+		if (!dateOfBirth) {
+			e.dateOfBirth = 'Date de naissance requise';
+		} else if (dateOfBirth > maxDate) {
+			e.dateOfBirth = 'La date ne peut pas être dans le futur';
+		} else if (dateOfBirth < minDate) {
+			e.dateOfBirth = 'Âge maximum 100 ans';
+		}
 		errors = e;
 		return Object.keys(e).length === 0;
 	}
 
+	const PHONE_RE = /^0[5-7]\d{8}$/;
+	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 	function validateStep2() {
 		const e: Record<string, string> = {};
-		if (!phone.trim()) e.phone = 'Champ requis';
+		const p = phone.trim();
+		if (!p) {
+			e.phone = 'Champ requis';
+		} else if (!PHONE_RE.test(p.replace(/\s/g, ''))) {
+			e.phone = 'Format invalide — ex: 0555 12 34 56';
+		}
+		const ep = emergencyContactPhone.trim();
+		if (ep && !PHONE_RE.test(ep.replace(/\s/g, ''))) {
+			e.emergencyContactPhone = 'Format invalide — ex: 0555 12 34 56';
+		}
+		const em = email.trim();
+		if (em && !EMAIL_RE.test(em)) {
+			e.email = 'Adresse email invalide';
+		}
+		errors = e;
+		return Object.keys(e).length === 0;
+	}
+
+	const NSS_RE = /^\d{15}$/;
+
+	function validateStep4() {
+		const e: Record<string, string> = {};
+		const n = nss.trim();
+		if (n && !NSS_RE.test(n)) {
+			e.nss = 'Le NSS doit contenir exactement 15 chiffres';
+		}
 		errors = e;
 		return Object.keys(e).length === 0;
 	}
@@ -161,6 +212,7 @@
 	<form
 		method="POST"
 		use:enhance={() => {
+			if (!validateStep4()) return () => {}; // abort submit
 			loading = true;
 			return async ({ update }) => {
 				loading = false;
@@ -168,6 +220,26 @@
 			};
 		}}
 	>
+		<!-- Persist all field values across step transitions — only the active step's
+		     inputs are in the DOM, so hidden inputs carry the other steps' data. -->
+		<input type="hidden" name="firstName" value={firstName} />
+		<input type="hidden" name="lastName" value={lastName} />
+		<input type="hidden" name="dateOfBirth" value={dateOfBirth} />
+		<input type="hidden" name="gender" value={gender} />
+		<input type="hidden" name="bloodGroup" value={bloodGroup} />
+		<input type="hidden" name="phone" value={phone} />
+		<input type="hidden" name="email" value={email} />
+		<input type="hidden" name="address" value={address} />
+		<input type="hidden" name="wilaya" value={wilaya} />
+		<input type="hidden" name="emergencyContactName" value={emergencyContactName} />
+		<input type="hidden" name="emergencyContactPhone" value={emergencyContactPhone} />
+		<input type="hidden" name="allergies" value={allergies} />
+		<input type="hidden" name="medicalHistory" value={medicalHistory} />
+		<input type="hidden" name="currentTreatment" value={currentTreatment} />
+		<input type="hidden" name="nss" value={nss} />
+		<input type="hidden" name="insuranceProvider" value={insuranceProvider} />
+		<input type="hidden" name="mutualInsurance" value={mutualInsurance} />
+
 		<div class="card" style="overflow:hidden">
 
 			<!-- Section header -->
@@ -209,7 +281,7 @@
 						</div>
 						<div>
 							<label for="dateOfBirth" class="field-label" class:err={errors.dateOfBirth}>DATE DE NAISSANCE *</label>
-							<input id="dateOfBirth" name="dateOfBirth" type="date" bind:value={dateOfBirth} class="mk-input" class:input-err={errors.dateOfBirth} />
+							<input id="dateOfBirth" name="dateOfBirth" type="date" bind:value={dateOfBirth} min={minDate} max={maxDate} class="mk-input" class:input-err={errors.dateOfBirth} />
 							{#if errors.dateOfBirth}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.dateOfBirth}</p>{/if}
 						</div>
 						<div>
@@ -222,7 +294,6 @@
 									<span class="radio-dot {gender === 'F' ? 'checked' : ''}"></span> Féminin
 								</button>
 							</div>
-							<input type="hidden" name="gender" value={gender} />
 						</div>
 						<div>
 							<label for="bloodGroup" class="field-label">GROUPE SANGUIN</label>
@@ -254,7 +325,8 @@
 							<label for="email" class="field-label">EMAIL</label>
 							<div style="position:relative">
 								<div class="field-icon"><Icon name="mail" size={14} color="#9CA3AF" /></div>
-								<input id="email" name="email" type="email" bind:value={email} placeholder="patient@email.com" class="mk-input" style="padding-left:36px" />
+								<input id="email" name="email" type="email" bind:value={email} placeholder="patient@email.com" class="mk-input" class:input-err={errors.email} style="padding-left:36px" />
+							{#if errors.email}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.email}</p>{/if}
 							</div>
 						</div>
 						<div style="grid-column:1 / -1">
@@ -286,7 +358,8 @@
 							<label for="emergencyContactPhone" class="field-label">TÉLÉPHONE URGENCE</label>
 							<div style="position:relative">
 								<div class="field-icon"><Icon name="phone" size={14} color="#9CA3AF" /></div>
-								<input id="emergencyContactPhone" name="emergencyContactPhone" bind:value={emergencyContactPhone} placeholder="0555 XX XX XX" class="mk-input" style="padding-left:36px" />
+								<input id="emergencyContactPhone" name="emergencyContactPhone" bind:value={emergencyContactPhone} placeholder="0555 XX XX XX" class="mk-input" class:input-err={errors.emergencyContactPhone} style="padding-left:36px" />
+								{#if errors.emergencyContactPhone}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.emergencyContactPhone}</p>{/if}
 							</div>
 						</div>
 					</div>
@@ -319,7 +392,8 @@
 					<div style="display:flex;flex-direction:column;gap:20px">
 						<div>
 							<label for="nss" class="field-label">NUMÉRO DE SÉCURITÉ SOCIALE (NSS)</label>
-							<input id="nss" name="nss" bind:value={nss} placeholder="Ex: 175031600012345" class="mk-input" />
+							<input id="nss" name="nss" bind:value={nss} placeholder="Ex: 175031600012345" class="mk-input" class:input-err={errors.nss} />
+						{#if errors.nss}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.nss}</p>{/if}
 						</div>
 
 						<div>

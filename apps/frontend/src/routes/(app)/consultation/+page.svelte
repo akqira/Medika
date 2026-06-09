@@ -2,17 +2,28 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import type { PageData, ActionData } from './$types';
+	import type { PatientSummary } from '$lib/types/api';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import QuickAddPatientModal from '$lib/components/QuickAddPatientModal.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const appointmentId = $derived(page.url.searchParams.get('appointmentId') ?? '');
 
+	let patients = $state<PatientSummary[]>(data.patients);
 	let selectedPatientId = $state('');
+	let showQuickAdd = $state(false);
+
 	const selectedPatient = $derived(
-		data.patients.find(p => p.id === selectedPatientId) ?? null
+		patients.find(p => p.id === selectedPatientId) ?? null
 	);
+
+	function onPatientAdded(patient: PatientSummary) {
+		patients = [patient, ...patients];
+		selectedPatientId = patient.id;
+		showQuickAdd = false;
+	}
 
 	// Vitals
 	let bp     = $state('');
@@ -66,6 +77,10 @@
 	}
 </script>
 
+{#if showQuickAdd}
+	<QuickAddPatientModal {onPatientAdded} onClose={() => showQuickAdd = false} />
+{/if}
+
 <form
 	bind:this={formEl}
 	method="POST"
@@ -105,7 +120,19 @@
 
 			<!-- Patient selector -->
 			<div class="card" style="padding:18px 20px;margin-bottom:16px">
-				<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Patient</div>
+				<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+					<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Patient</div>
+					{#if !selectedPatient}
+						<button
+							type="button"
+							onclick={() => showQuickAdd = true}
+							style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:var(--primary-50);border:1px solid var(--primary-light);border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;color:var(--primary);cursor:pointer"
+						>
+							<Icon name="plus" size={12} color="var(--primary)" />
+							Nouveau patient
+						</button>
+					{/if}
+				</div>
 				<input type="hidden" name="patientId" value={selectedPatientId} />
 				{#if selectedPatient}
 					<div style="display:flex;align-items:center;gap:12px">
@@ -125,12 +152,12 @@
 						style="font-size:14px"
 					>
 						<option value="">— Sélectionner un patient —</option>
-						{#each data.patients as p}
+						{#each patients as p}
 							<option value={p.id}>{p.firstName} {p.lastName} ({p.age} ans)</option>
 						{/each}
 					</select>
-					{#if data.patients.length === 0}
-						<p style="font-size:12.5px;color:var(--text-muted);margin-top:8px">Aucun patient disponible. Vérifiez la connexion au serveur.</p>
+					{#if patients.length === 0}
+						<p style="font-size:12.5px;color:var(--text-muted);margin-top:8px">Aucun patient. Utilisez « Nouveau patient » pour en créer un.</p>
 					{/if}
 				{/if}
 			</div>
