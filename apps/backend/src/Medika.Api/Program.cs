@@ -1,6 +1,7 @@
 using FastEndpoints;
 using FastEndpoints.Swagger;
 using Medika.Api;
+using Medika.Api.Middleware;
 using Medika.Infrastructure;
 using Medika.Infrastructure.Auth;
 using Medika.Infrastructure.Persistence;
@@ -87,6 +88,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseExceptionHandler();
 app.UseCors();
+app.UseMiddleware<ApiKeyMiddleware>(); // X-API-KEY + anti-replay timestamp — BFF-only access (eGestion ADR-008)
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

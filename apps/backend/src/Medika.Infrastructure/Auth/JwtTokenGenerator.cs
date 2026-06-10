@@ -20,6 +20,7 @@ public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim("fullName", $"{user.FirstName} {user.LastName}"),
+            new Claim("cabinetId", user.CabinetId ?? string.Empty),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 

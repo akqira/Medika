@@ -1,7 +1,19 @@
 using FastEndpoints;
+using FluentValidation;
 using Medika.Application.Identity.Commands.Login;
 
 namespace Medika.Api.Endpoints.Auth;
+
+public record LoginRequest(string Email, string Password);
+
+public class LoginValidator : Validator<LoginRequest>
+{
+    public LoginValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Password).NotEmpty();
+    }
+}
 
 public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
 {
@@ -20,5 +32,4 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
     }
 }
 
-public record LoginRequest(string Email, string Password);
 public record LoginResponse(string Token, string UserId, string Role, string FullName);

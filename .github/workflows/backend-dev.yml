@@ -1,0 +1,67 @@
+# Backend CI/CD — DEV/STAGING environment (mirrors eGestion's dev-eGestion-Api)
+# Push to 'dev' branch → build + test → deploy to dev-medika-api
+name: Backend CI/CD (dev)
+
+on:
+  push:
+    branches: [dev]
+    paths: ['apps/backend/**', '.github/workflows/backend-dev.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build solution
+        run: dotnet build Medika.slnx --configuration Release
+        working-directory: ./apps/backend
+
+      - name: Test
+        run: dotnet test Medika.slnx --configuration Release --no-build
+        working-directory: ./apps/backend
+
+      - name: Publish
+        run: dotnet publish src/Medika.Api/Medika.Api.csproj -c Release -o ./publish
+        working-directory: ./apps/backend
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ./apps/backend/publish
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_DEV }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
+
+      - name: Deploy to Azure Web App (dev)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'dev-medika-api'
+          package: .

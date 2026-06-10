@@ -11,8 +11,13 @@ public class CreatePatientHandler(
 {
     public async Task<string> ExecuteAsync(CreatePatientCommand cmd, CancellationToken ct)
     {
+        var cabinetId = currentUser.CabinetId;
+        if (string.IsNullOrEmpty(cabinetId))
+            throw new UnauthorizedAccessException("Missing cabinet claim — please re-login.");
+
         var dob = DateOnly.Parse(cmd.DateOfBirth);
         var patient = Patient.Create(
+            cabinetId,
             cmd.FirstName, cmd.LastName, dob, cmd.Gender,
             cmd.Phone, cmd.Email, cmd.Address, cmd.Nss,
             cmd.BloodGroup, doctorId: currentUser.UserId,

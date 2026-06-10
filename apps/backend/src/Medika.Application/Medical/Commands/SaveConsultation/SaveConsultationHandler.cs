@@ -19,10 +19,14 @@ public class SaveConsultationHandler(
 {
     public async Task<string> ExecuteAsync(SaveConsultationCommand cmd, CancellationToken ct)
     {
+        var cabinetId = currentUser.CabinetId;
+        if (string.IsNullOrEmpty(cabinetId))
+            throw new UnauthorizedAccessException("Missing cabinet claim — please re-login.");
+
         // Upsert semantics: when not finalizing, look for an existing draft for same patient+doctor today
         Consultation? existing = null;
         if (!cmd.Finalize)
-            existing = await consultations.GetDraftAsync(cmd.PatientId, currentUser.UserId, ct);
+            existing = await consultations.GetDraftAsync(cabinetId, cmd.PatientId, currentUser.UserId, ct);
 
         Consultation consultation;
         bool isNew;
@@ -35,6 +39,7 @@ public class SaveConsultationHandler(
         else
         {
             consultation = Consultation.Start(
+                cabinetId,
                 cmd.PatientId, currentUser.UserId,
                 cmd.Reason, cmd.AppointmentId);
             isNew = true;
@@ -62,6 +67,9 @@ public class SaveConsultationHandler(
                 try
                 {
                     var appt = await appointments.GetByIdAsync(AppointmentId.From(cmd.AppointmentId), ct);
+                    // Cabinet guard — never act on an appointment from another cabinet.
+                    if (appt is not null && !string.IsNullOrEmpty(appt.CabinetId) && appt.CabinetId != cabinetId)
+                        appt = null;
                     if (appt is not null)
                     {
                         appt.Complete(consultation.Id.ToString());
@@ -80,13 +88,17 @@ public class SaveConsultationHandler(
                 }
             }
 
-            var invoiceNumber = await invoices.GenerateNumberAsync(ct);
+            var invoiceNumber = await invoices.GenerateNumberAsync(cabinetId, ct);
             var invoice = Invoice.CreateFromConsultation(
+                cabinetId,
                 cmd.PatientId, consultation.Id.ToString(),
                 currentUser.UserId, cmd.Tariff, invoiceNumber);
             await invoices.AddAsync(invoice, ct);
 
             var patient = await patients.GetByIdAsync(PatientId.From(cmd.PatientId), ct);
+            // Cabinet guard — never touch a patient from another cabinet.
+            if (patient is not null && !string.IsNullOrEmpty(patient.CabinetId) && patient.CabinetId != cabinetId)
+                patient = null;
             patient?.RecordVisit();
             if (patient is not null) await patients.UpdateAsync(patient, ct);
         }

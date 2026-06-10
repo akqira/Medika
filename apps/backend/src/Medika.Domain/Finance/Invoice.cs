@@ -5,6 +5,7 @@ namespace Medika.Domain.Finance;
 
 public sealed class Invoice : AggregateRoot<InvoiceId>
 {
+    public string CabinetId { get; private set; } = null!;
     public string PatientId { get; private set; } = null!;
     public string ConsultationId { get; private set; } = null!;
     public string DoctorId { get; private set; } = null!;
@@ -18,12 +19,14 @@ public sealed class Invoice : AggregateRoot<InvoiceId>
     private Invoice() { }
 
     public static Invoice CreateFromConsultation(
+        string cabinetId,
         string patientId, string consultationId,
         string doctorId, decimal amount, string number)
     {
         return new Invoice
         {
             Id = InvoiceId.New(),
+            CabinetId = cabinetId,
             PatientId = patientId,
             ConsultationId = consultationId,
             DoctorId = doctorId,

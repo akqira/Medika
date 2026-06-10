@@ -5,6 +5,7 @@ namespace Medika.Domain.Scheduling;
 
 public sealed class Appointment : AggregateRoot<AppointmentId>
 {
+    public string CabinetId { get; private set; } = null!;
     public string PatientId { get; private set; } = null!;
     public string DoctorId { get; private set; } = null!;
     public DateOnly Date { get; private set; }
@@ -21,6 +22,7 @@ public sealed class Appointment : AggregateRoot<AppointmentId>
     private Appointment() { }
 
     public static Appointment Book(
+        string cabinetId,
         string patientId, string doctorId,
         DateOnly date, TimeOnly time,
         int durationMinutes, string reason,
@@ -29,6 +31,7 @@ public sealed class Appointment : AggregateRoot<AppointmentId>
         var appt = new Appointment
         {
             Id = AppointmentId.New(),
+            CabinetId = cabinetId,
             PatientId = patientId,
             DoctorId = doctorId,
             Date = date,

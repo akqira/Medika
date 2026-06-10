@@ -5,6 +5,7 @@ namespace Medika.Domain.Finance;
 
 public sealed class Charge : AggregateRoot<ChargeId>
 {
+    public string CabinetId { get; private set; } = null!;
     public string DoctorId { get; private set; } = null!;
     public ChargeCategory Category { get; private set; }
     public string Description { get; private set; } = null!;
@@ -16,6 +17,7 @@ public sealed class Charge : AggregateRoot<ChargeId>
     private Charge() { }
 
     public static Charge Add(
+        string cabinetId,
         string doctorId, ChargeCategory category,
         string description, decimal amount, DateOnly date,
         bool isRecurring = false)
@@ -23,6 +25,7 @@ public sealed class Charge : AggregateRoot<ChargeId>
         var charge = new Charge
         {
             Id = ChargeId.New(),
+            CabinetId = cabinetId,
             DoctorId = doctorId,
             Category = category,
             Description = description,

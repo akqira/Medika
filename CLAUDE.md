@@ -105,21 +105,44 @@ Only `apps/frontend` is listed in `pnpm-workspace.yaml`.
 
 ```
 Medika.Domain/        Entities, value objects, domain events, repository interfaces
-Medika.Application/   CQRS commands/queries + MediatR handlers, interfaces
+Medika.Application/   CQRS commands/queries + handlers (FastEndpoints command bus — NOT MediatR), interfaces
 Medika.Infrastructure/ MongoDB repos, JWT, Cloudflare R2 storage, audit
 Medika.Api/           FastEndpoints endpoints, Program.cs, GlobalExceptionHandler
 ```
+
+### Multi-tenancy — cabinet scoping (non-negotiable, ported from eGestion)
+
+- Every business document (patients, appointments, consultations, invoices, charges, users) carries `cabinetId`. It comes from the **JWT claim** `cabinetId` (via `ICurrentUserService.CabinetId`) — never from request body or URL.
+- `cabinetId` is ALWAYS the **first parameter** of repository query methods, the **first filter clause** in Mongo queries, and the **first field** in compound indexes.
+- Handlers must guard: empty `CabinetId` claim → `UnauthorizedAccessException` ("please re-login"). Cross-cabinet load-by-id → `KeyNotFoundException` (404, no information leak).
+- Invoice numbers (`F-YYYY-NNN`) are unique **per cabinet** (compound unique index `cabinetId + number`).
+- `MongoDbInitializer.BackfillCabinetIdAsync` stamps legacy documents with the first doctor's cabinetId at startup (idempotent).
+- After deploying this change, existing JWTs lack the claim — users must re-login.
+
+### Validation convention
+
+- Input validation = FluentValidation via `FastEndpoints.Validator<TRequest>` classes, auto-discovered and run by the pipeline (400 ProblemDetails). Never validate manually in `HandleAsync`.
+- Validators must target the endpoint's **request type** (most endpoints use the Application Command directly as request DTO).
+- Business-rule validation (status transitions, ownership) stays in domain methods / handlers.
 
 - Endpoints inherit `Endpoint<TReq, TRes>` (FastEndpoints convention).
 - MongoDB Atlas for persistence (dev DB: `medika_dev`). Startup auto-initialises indexes and seeds data via `MongoDbInitializer`.
 - JWT Bearer auth. Rate limiter on login (5 req/min fixed window).
 - CORS allowed origins configured via `Cors:AllowedOrigins` in appsettings; defaults to `http://localhost:5173`.
 
+### Request security (pattern ported from eGestion, see its ADR-008)
+
+- `ApiKeyMiddleware` (`Medika.Api/Middleware/`): **all** endpoints (including login) require `X-API-KEY` matching `ApiSettings:ApiKey` — the .NET API is only callable by our BFF. Exceptions: `/api/health`, `/swagger`, OPTIONS preflight.
+- All non-login endpoints additionally require `X-Request-Timestamp` (ISO 8601, rejected if > 5 min from UtcNow — anti-replay).
+- JWT is signed **only by the .NET API**; the secret lives in `appsettings.Development.json` (gitignored) locally and Azure App Service settings in prod — never in Vercel or `.env`.
+- `ApiSettings:ApiKey` (backend) must equal `API_SECRET` (frontend `.env` / Vercel env var). Neither may be committed or `PUBLIC_`-prefixed.
+- Frontend: **every** backend call goes through `src/lib/server/remoteApiProxy.ts` (`RemoteApi`), which injects API key + timestamp + Bearer token. `src/lib/server/api.ts` is a thin facade over it (`api.get/.post/.patch/.del`) — keep using it; never call `fetch` to the backend directly. `RemoteApi.fetchThenRetrieveStream()` exists for file/PDF downloads.
+
 ### Frontend — SvelteKit 2 / Svelte 5
 
 - **Svelte 5 runes mode enforced globally** (via `svelte.config.js`). Use `$props()`, `$state()`, `$derived()` — never the legacy options API.
 - Deployed to **Vercel** (`@sveltejs/adapter-vercel`).
-- All backend calls go through `src/lib/server/api.ts` (`api.get / .post / .patch / .del`). Always pass the JWT from `getToken(cookies)`. This module is server-only.
+- All backend calls go through `src/lib/server/api.ts` (`api.get / .post / .patch / .del`), which delegates to `src/lib/server/remoteApiProxy.ts` (central proxy adding `X-API-KEY` + `X-Request-Timestamp` + JWT). Always pass the JWT from `getToken(cookies)`. These modules are server-only.
 
 **Route groups:**
 
@@ -155,6 +178,10 @@ Global CSS variables and utility classes live in `src/app.css`. Always use them:
 Utility classes: `.card`, `.mk-nav`, `.mk-content`, `.mk-input`, `.mk-tab`, `.mk-table`, `.truncate`. Font: DM Sans.
 
 ---
+
+## Branches & deployment
+
+`feature/*` → `dev` (staging: `dev-medika-api` App Service + Vercel Preview) → `main` (production: `medika-api` + Vercel Production). Workflows: `.github/workflows/backend.yml` (main) and `backend-dev.yml` (dev). Setup guide: `docs/setup/azure-app-service-migration.md`.
 
 ## Known gotchas
 

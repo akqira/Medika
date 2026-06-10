@@ -1,3 +1,5 @@
+# Backend CI/CD — Azure App Service (aligned with eGestion's pipeline)
+# Replaces the previous Container Apps deployment. See docs/setup/azure-app-service-migration.md
 name: Backend CI/CD
 
 on:
@@ -7,14 +9,14 @@ on:
   pull_request:
     branches: [main]
     paths: ['apps/backend/**']
-
-env:
-  REGISTRY: ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}
-  IMAGE_NAME: medika-api
+  workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,45 +25,49 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
-        run: dotnet restore apps/backend/src/Medika.Api/Medika.Api.csproj
+      - name: Build solution
+        run: dotnet build Medika.slnx --configuration Release
+        working-directory: ./apps/backend
 
-      - name: Build
-        run: dotnet build apps/backend/src/Medika.Api/Medika.Api.csproj --no-restore -c Release
+      # Quality gate — runs all test projects in the solution.
+      # (No-op until Medika.Tests exists; do NOT remove this step.)
+      - name: Test
+        run: dotnet test Medika.slnx --configuration Release --no-build
+        working-directory: ./apps/backend
+
+      - name: Publish
+        run: dotnet publish src/Medika.Api/Medika.Api.csproj -c Release -o ./publish
+        working-directory: ./apps/backend
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ./apps/backend/publish
 
   deploy:
-    needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      id-token: write # required for OIDC login
+      contents: read
 
-      - name: Azure Login
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
-      - name: Log in to ACR
-        run: |
-          az acr login --name ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}
-
-      - name: Build & Push Docker image
-        run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-                       -f apps/backend/Dockerfile apps/backend
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Deploy to Azure Container Apps
-        run: |
-          az containerapp update \
-            --name ${{ secrets.AZURE_CONTAINER_APP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            --set-env-vars \
-              "MongoDB__ConnectionString=secretref:mongodb-uri" \
-              "Jwt__Secret=secretref:jwt-secret" \
-              "R2__AccountId=secretref:r2-account-id" \
-              "R2__AccessKeyId=secretref:r2-access-key-id" \
-              "R2__SecretAccessKey=secretref:r2-secret-access-key"
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'medika-api'
+          package: .

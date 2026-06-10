@@ -1,8 +1,9 @@
+using FastEndpoints;
 using FluentValidation;
 
 namespace Medika.Application.Patients.Commands.CreatePatient;
 
-public class CreatePatientValidator : AbstractValidator<CreatePatientCommand>
+public class CreatePatientValidator : Validator<CreatePatientCommand>
 {
     public CreatePatientValidator()
     {

@@ -11,16 +11,21 @@ public class BookAppointmentHandler(
 {
     public async Task<string> ExecuteAsync(BookAppointmentCommand cmd, CancellationToken ct)
     {
+        var cabinetId = currentUser.CabinetId;
+        if (string.IsNullOrEmpty(cabinetId))
+            throw new UnauthorizedAccessException("Missing cabinet claim — please re-login.");
+
         var date = DateOnly.Parse(cmd.Date);
         var time = TimeOnly.Parse(cmd.Time);
         var type = Enum.Parse<AppointmentType>(cmd.Type, ignoreCase: true);
 
         var hasConflict = await appointments.HasConflictAsync(
-            currentUser.UserId, date, time, cmd.DurationMinutes, ct: ct);
+            cabinetId, currentUser.UserId, date, time, cmd.DurationMinutes, ct: ct);
         if (hasConflict)
             throw new InvalidOperationException("Time slot conflicts with an existing appointment.");
 
         var appt = Appointment.Book(
+            cabinetId,
             cmd.PatientId, currentUser.UserId,
             date, time, cmd.DurationMinutes, cmd.Reason, type);
 

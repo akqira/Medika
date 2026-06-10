@@ -27,6 +27,10 @@ Thumbs.db
 # Local dev secrets — never commit (leaked once, now ignored)
 apps/backend/src/Medika.Api/appsettings.Development.json
 
+# Log files — never commit
+apps/backend/src/Medika.Api/logs/
+*.log
+
 # Claude Code — local overrides contain secrets (MCP tokens, etc.)
 .claude/settings.local.json
 .claude/worktrees/

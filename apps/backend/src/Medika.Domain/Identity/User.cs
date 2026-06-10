@@ -5,6 +5,7 @@ namespace Medika.Domain.Identity;
 
 public sealed class User : AggregateRoot<UserId>
 {
+    public string CabinetId { get; private set; } = null!;
     public string Email { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
     public string FirstName { get; private set; } = null!;
@@ -36,11 +37,14 @@ public sealed class User : AggregateRoot<UserId>
         string firstName, string lastName,
         Role role,
         string? specialty = null,
-        string? orderNumber = null)
+        string? orderNumber = null,
+        string? cabinetId = null)
     {
         var user = new User
         {
             Id = UserId.New(),
+            // A new doctor founds a new cabinet by default; staff inherit the creator's cabinet.
+            CabinetId = cabinetId ?? Guid.NewGuid().ToString("N"),
             Email = email.ToLowerInvariant(),
             PasswordHash = passwordHash,
             FirstName = firstName,

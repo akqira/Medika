@@ -1,4 +1,5 @@
 using FastEndpoints;
+using Medika.Application.Common.Interfaces;
 using Medika.Application.Medical.Queries.GetPatientConsultations;
 using Medika.Domain.Medical;
 
@@ -13,6 +14,7 @@ public class GetConsultationDetailRequest
 public class GetConsultationDetailEndpoint : Endpoint<GetConsultationDetailRequest, ConsultationDetail>
 {
     public IConsultationRepository Consultations { get; set; } = null!;
+    public ICurrentUserService CurrentUser { get; set; } = null!;
 
     public override void Configure()
     {
@@ -22,7 +24,14 @@ public class GetConsultationDetailEndpoint : Endpoint<GetConsultationDetailReque
 
     public override async Task HandleAsync(GetConsultationDetailRequest req, CancellationToken ct)
     {
-        var consultation = await Consultations.GetByIdStringAsync(req.ConsultationId, ct);
+        var cabinetId = CurrentUser.CabinetId;
+        if (string.IsNullOrEmpty(cabinetId))
+        {
+            await HttpContext.Response.SendUnauthorizedAsync(ct);
+            return;
+        }
+
+        var consultation = await Consultations.GetByIdStringAsync(cabinetId, req.ConsultationId, ct);
 
         if (consultation is null || consultation.PatientId != req.Id)
         {

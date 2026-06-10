@@ -5,6 +5,7 @@ namespace Medika.Domain.Medical;
 
 public sealed class Consultation : AggregateRoot<ConsultationId>
 {
+    public string CabinetId { get; private set; } = null!;
     public string PatientId { get; private set; } = null!;
     public string DoctorId { get; private set; } = null!;
     public string? AppointmentId { get; private set; }
@@ -23,12 +24,14 @@ public sealed class Consultation : AggregateRoot<ConsultationId>
     private Consultation() { }
 
     public static Consultation Start(
+        string cabinetId,
         string patientId, string doctorId,
         string reason, string? appointmentId = null)
     {
         return new Consultation
         {
             Id = ConsultationId.New(),
+            CabinetId = cabinetId,
             PatientId = patientId,
             DoctorId = doctorId,
             AppointmentId = appointmentId,

@@ -5,6 +5,7 @@ namespace Medika.Domain.Patients;
 
 public sealed class Patient : AggregateRoot<PatientId>
 {
+    public string CabinetId { get; private set; } = null!;
     public string FirstName { get; private set; } = null!;
     public string LastName { get; private set; } = null!;
     public DateOnly DateOfBirth { get; private set; }
@@ -34,6 +35,7 @@ public sealed class Patient : AggregateRoot<PatientId>
     private Patient() { }
 
     public static Patient Create(
+        string cabinetId,
         string firstName, string lastName,
         DateOnly dateOfBirth, string gender,
         string phone, string? email = null,
@@ -47,6 +49,7 @@ public sealed class Patient : AggregateRoot<PatientId>
         var patient = new Patient
         {
             Id = PatientId.New(),
+            CabinetId = cabinetId,
             FirstName = firstName,
             LastName = lastName,
             DateOfBirth = dateOfBirth,

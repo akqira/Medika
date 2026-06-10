@@ -10,7 +10,11 @@ public class GetChargesHandler(
 {
     public async Task<ChargesResult> ExecuteAsync(GetChargesQuery query, CancellationToken ct)
     {
-        var items = await charges.GetByDoctorAndMonthAsync(currentUser.UserId, query.Year, query.Month, ct);
+        var cabinetId = currentUser.CabinetId;
+        if (string.IsNullOrEmpty(cabinetId))
+            throw new UnauthorizedAccessException("Missing cabinet claim — please re-login.");
+
+        var items = await charges.GetByDoctorAndMonthAsync(cabinetId, currentUser.UserId, query.Year, query.Month, ct);
 
         var chargeItems = items
             .Select(c => new ChargeItem(
