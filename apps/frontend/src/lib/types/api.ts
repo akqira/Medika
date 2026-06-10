@@ -20,6 +20,41 @@ export interface PatientSummary {
 	allergyCount: number;
 }
 
+export interface PatientDetail {
+	id: string;
+	firstName: string;
+	lastName: string;
+	dateOfBirth?: string;
+	age: number;
+	gender: 'M' | 'F';
+	phone: string;
+	email?: string;
+	address?: string;
+	nss?: string;
+	bloodGroup?: string;
+	wilaya?: string;
+	emergencyContactName?: string;
+	emergencyContactPhone?: string;
+	insuranceProvider?: string;
+	mutualInsurance?: string;
+	currentTreatment?: string;
+	allergies: string[];
+	medicalHistory: string[];
+	lastVisitAt?: string;
+	createdAt: string;
+}
+
+export interface PatientInvoice {
+	id: string;
+	number: string;
+	consultationId: string;
+	amount: number;
+	status: 'Pending' | 'Paid' | 'Cancelled';
+	paymentMethod?: 'Cash' | 'BankTransfer' | 'Check' | 'Other';
+	issuedAt: string;
+	paidAt?: string;
+}
+
 export interface AppointmentSlot {
 	id: string;
 	patientId: string;
@@ -63,18 +98,19 @@ export interface VitalSigns {
 }
 
 export interface ConsultationSummary {
-	id: string;
-	patientId: string;
-	appointmentId?: string;
+	consultationId: string;
 	date: string;
 	reason: string;
 	diagnosis?: string;
 	tariff: number;
-	finalized: boolean;
-	createdAt: string;
+	isFinalized: boolean;
+	prescriptionCount: number;
+	appointmentId?: string;
 }
 
 export interface ConsultationDetail extends ConsultationSummary {
+	patientId: string;
+	doctorId: string;
 	clinicalExam?: string;
 	notes?: string;
 	vitalSigns?: VitalSigns;
