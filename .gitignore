@@ -23,3 +23,13 @@ apps/frontend/.cert/
 # Misc
 .DS_Store
 Thumbs.db
+
+# Local dev secrets — never commit (leaked once, now ignored)
+apps/backend/src/Medika.Api/appsettings.Development.json
+
+# Claude Code — local overrides contain secrets (MCP tokens, etc.)
+.claude/settings.local.json
+.claude/worktrees/
+
+# VSCode — personal editor preferences, not project config
+.vscode/
