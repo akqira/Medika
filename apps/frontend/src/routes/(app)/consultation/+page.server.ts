@@ -50,9 +50,9 @@ export const actions: Actions = {
 			return fail(400, { error: 'Veuillez sélectionner un patient.' });
 		}
 
-		let result: { id: string };
+		let result: { consultationId: string };
 		try {
-			result = await api.post<{ id: string }>('/api/consultations', {
+			result = await api.post<{ consultationId: string }>('/api/consultations', {
 				patientId,
 				appointmentId,
 				reason,
@@ -70,7 +70,7 @@ export const actions: Actions = {
 		}
 
 		if (finalize) {
-			redirect(303, `/patients?created=${result.id}`);
+			redirect(303, `/patients?created=${result.consultationId}`);
 		}
 
 		return { success: 'Consultation enregistrée en brouillon.' };

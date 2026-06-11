@@ -47,6 +47,7 @@ public static class DomainMappings
 
             RegisterPatientMap();
             RegisterAppointmentMap();
+            RegisterPrescriptionLineMap();
             RegisterConsultationMap();
             RegisterInvoiceMap();
             RegisterChargeMap();
@@ -79,6 +80,19 @@ public static class DomainMappings
         });
     }
 
+    private static void RegisterPrescriptionLineMap()
+    {
+        if (BsonClassMap.IsClassMapRegistered(typeof(PrescriptionLine))) return;
+        BsonClassMap.RegisterClassMap<PrescriptionLine>(cm =>
+        {
+            cm.AutoMap();
+            cm.SetIgnoreExtraElements(true);
+            // PrescriptionLine is immutable (getter-only props, constructor-only). Without an
+            // explicit creator the driver can serialize it but cannot reconstruct it on read.
+            cm.MapCreator(p => new PrescriptionLine(p.Medication, p.Dosage, p.Duration, p.Quantity, p.Frequency));
+        });
+    }
+
     private static void RegisterConsultationMap()
     {
         if (BsonClassMap.IsClassMapRegistered(typeof(Consultation))) return;
@@ -86,7 +100,11 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
-            cm.MapMember(c => c.Prescription).SetElementName("prescription");
+            // Drop the unsettable read-only property and map the private backing field instead,
+            // so MongoDB can round-trip the list — a getter-only property serializes on write
+            // but cannot be deserialized on read, leaving _prescription empty.
+            cm.UnmapMember(c => c.Prescription);
+            cm.MapField("_prescription").SetElementName("prescription");
         });
     }
 
