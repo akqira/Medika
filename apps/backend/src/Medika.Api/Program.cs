@@ -32,7 +32,11 @@ builder.Host.UseSerilog();
 
 // Sentry — binds the "Sentry" config section (Dsn, Environment, TracesSampleRate, ...).
 // Empty Dsn (local dev default) makes the SDK a no-op, so this is safe everywhere.
-builder.WebHost.UseSentry();
+// This is the single init point; UseSentry owns config binding + the OTel-style logs feature.
+builder.WebHost.UseSentry(o =>
+{
+    o.EnableLogs = true; // forward structured logs to Sentry's Logs product
+});
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
