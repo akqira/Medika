@@ -3,6 +3,7 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
+import { sentrySvelteKit } from '@sentry/sveltekit';
 
 // Local HTTPS dev cert. These files exist only on dev machines (the .cert
 // directory is gitignored and never deployed). On Vercel the cert is absent,
@@ -14,7 +15,16 @@ const certPath = resolve(certDir, "cert.pem");
 const hasLocalCert = existsSync(keyPath) && existsSync(certPath);
 
 export default defineConfig({
-  plugins: [tailwindcss(), sveltekit()],
+  plugins: [
+    sentrySvelteKit({
+      adapter: "vercel",
+      org: "oritek",
+      project: "medika-frontend",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+    }),
+    tailwindcss(),
+    sveltekit(),
+  ],
   server: {
     host: true,
     port: 5000,

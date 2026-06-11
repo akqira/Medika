@@ -1,2 +1,5 @@
 packages:
   - 'apps/frontend'
+allowBuilds:
+  '@sentry/cli': true
+  esbuild: true
