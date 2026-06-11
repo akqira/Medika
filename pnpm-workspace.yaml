@@ -1,5 +1,9 @@
 packages:
   - 'apps/frontend'
+# Don't auto-run `pnpm install` before `pnpm run <script>`. The supply-chain
+# release-age guard otherwise blocks `pnpm dev` whenever the lockfile contains a
+# very recently published (transitive) package. Run `pnpm install` explicitly.
+verifyDepsBeforeRun: false
 allowBuilds:
   '@sentry/cli': true
   esbuild: true

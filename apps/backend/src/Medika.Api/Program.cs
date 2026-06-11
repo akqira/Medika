@@ -18,7 +18,13 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
     .WriteTo.File("logs/medika-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
-    .WriteTo.Sentry()
+    .WriteTo.Sentry(
+    o =>
+    {
+        o.InitializeSdk = false;                                // UseSentry() owns init + appsettings binding
+        o.MinimumEventLevel = Serilog.Events.LogEventLevel.Error;       // Error+ become Sentry events
+        o.MinimumBreadcrumbLevel = Serilog.Events.LogEventLevel.Information; // optional
+    })
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);

@@ -13,7 +13,7 @@ const config = {
     adapter: adapter(),
     experimental: {
       instrumentation: { server: true },
-      tracing: { server: true },
+      explicitEnvironmentVariables: false,
     },
   },
 };
