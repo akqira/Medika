@@ -9,6 +9,7 @@ using Medika.Domain.Scheduling;
 using Medika.Infrastructure.Audit;
 using Medika.Infrastructure.Auth;
 using Medika.Infrastructure.Persistence;
+using Medika.Infrastructure.Pdf;
 using Medika.Infrastructure.Persistence.Mappings;
 using Medika.Infrastructure.Persistence.Repositories;
 using Medika.Infrastructure.Storage;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using QuestPDF.Infrastructure;
 
 namespace Medika.Infrastructure;
 
@@ -27,10 +29,14 @@ public static class DependencyInjection
     {
         DomainMappings.Register();
 
+        // QuestPDF Community licence — free for companies under $1M annual revenue.
+        QuestPDF.Settings.License = LicenseType.Community;
+
         services.AddMongoDB(config);
         services.AddAuth(config);
         services.AddStorage(config);
         services.AddAudit();
+        services.AddScoped<IPrescriptionPdfGenerator, PrescriptionPdfGenerator>();
 
         return services;
     }

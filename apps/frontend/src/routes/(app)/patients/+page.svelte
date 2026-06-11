@@ -582,6 +582,16 @@
 											{#if detailLoading}
 												<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:20px 0">Chargement…</div>
 											{:else if expandedDetail && expandedDetail.prescription?.length > 0}
+												<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+													<a
+														href={`/api/patients/${selectedPatient!.id}/consultations/${c.consultationId}/ordonnance`}
+														download
+														class="mk-btn-print"
+													>
+														<Icon name="printer" size={14} color="currentColor" />
+														<span>Imprimer l'ordonnance</span>
+													</a>
+												</div>
 												<div style="display:flex;flex-direction:column;gap:6px">
 													{#each expandedDetail.prescription as line}
 														<div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 12px;display:flex;align-items:center;gap:10px">
@@ -743,3 +753,24 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.mk-btn-print {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 6px 12px;
+		background: var(--surface);
+		color: var(--primary);
+		border: 1px solid var(--border);
+		border-radius: 7px;
+		font-size: 12.5px;
+		font-weight: 600;
+		text-decoration: none;
+		transition: background 0.12s, border-color 0.12s;
+	}
+	.mk-btn-print:hover {
+		background: var(--primary-50);
+		border-color: var(--primary-light);
+	}
+</style>
