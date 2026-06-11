@@ -18,10 +18,15 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
     .WriteTo.File("logs/medika-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
+    .WriteTo.Sentry()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
+
+// Sentry — binds the "Sentry" config section (Dsn, Environment, TracesSampleRate, ...).
+// Empty Dsn (local dev default) makes the SDK a no-op, so this is safe everywhere.
+builder.WebHost.UseSentry();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 

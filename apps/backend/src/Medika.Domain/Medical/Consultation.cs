@@ -19,7 +19,8 @@ public sealed class Consultation : AggregateRoot<ConsultationId>
     public decimal Tariff { get; private set; }
     public bool IsFinalized { get; private set; }
 
-    private readonly List<PrescriptionLine> _prescription = [];
+    // Not readonly: MongoDB's BsonClassMap needs to assign this backing field on deserialize.
+    private List<PrescriptionLine> _prescription = [];
 
     private Consultation() { }
 

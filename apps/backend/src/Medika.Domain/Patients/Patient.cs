@@ -29,8 +29,9 @@ public sealed class Patient : AggregateRoot<PatientId>
     public string? MutualInsurance { get; private set; }
     public string? CurrentTreatment { get; private set; }
 
-    private readonly List<string> _allergies = [];
-    private readonly List<string> _medicalHistory = [];
+    // Not readonly: MongoDB's BsonClassMap needs to assign these backing fields on deserialize.
+    private List<string> _allergies = [];
+    private List<string> _medicalHistory = [];
 
     private Patient() { }
 
