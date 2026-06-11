@@ -65,7 +65,12 @@ export class RemoteApi {
           console.warn(`[RemoteApi] 401 on authenticated request to ${args.url} — resetting session`);
           redirect(307, TOKEN_REQUIRED_REDIRECT);
         }
-        error(401, "Unauthorized");
+        // Unauthenticated 401 (e.g. /api/auth/login): could be bad credentials OR a
+        // rejected API key / stale timestamp from ApiKeyMiddleware — both return 401.
+        // Log the backend body + URL so the two are distinguishable in Vercel/Sentry.
+        const body = await response.text().catch(() => "");
+        console.warn("[RemoteApi] 401 (unauthenticated)", { url: fullUrl, body });
+        error(401, body || "Unauthorized");
       }
       if (response.status === 403) error(403, "Forbidden");
       if (response.status === 404) error(404, "Not found");
