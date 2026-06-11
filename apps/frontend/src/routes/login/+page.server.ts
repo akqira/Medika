@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isHttpError, isRedirect } from '@sveltejs/kit';
 import { api } from '$lib/server/api';
 import { setToken, setUser, getToken } from '$lib/server/session';
 import type { Actions, PageServerLoad } from './$types';
@@ -27,8 +27,25 @@ export const actions: Actions = {
 
 			setToken(cookies, result.token);
 			setUser(cookies, { fullName: result.fullName, role: result.role });
-		} catch {
-			return fail(401, { error: 'Email ou mot de passe incorrect.' });
+		} catch (err) {
+			if (isRedirect(err)) throw err; // never swallow a redirect
+
+			const status = isHttpError(err) ? err.status : 500;
+
+			// Only a genuine 401 means wrong email/password. Anything else
+			// (503 backend unreachable, 500, API-key/config error) is a server-side
+			// problem — log it and say so, instead of blaming the user's credentials.
+			if (status === 401) {
+				return fail(401, { error: 'Email ou mot de passe incorrect.' });
+			}
+
+			console.error('[login] backend error', {
+				status,
+				message: isHttpError(err) ? err.body?.message : String(err)
+			});
+			return fail(503, {
+				error: 'Service momentanément indisponible. Réessayez dans un instant.'
+			});
 		}
 
 		redirect(302, '/dashboard');
