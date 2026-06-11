@@ -1,11 +1,13 @@
-name: Frontend CI/CD
+name: Frontend CI
 
+# Build/type-check only. Deployments are handled by Vercel's GitHub integration
+# (auto-deploys every push: production on main, preview on other branches).
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths: ['apps/frontend/**', '.github/workflows/frontend.yml']
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths: ['apps/frontend/**']
 
 jobs:
@@ -33,32 +35,3 @@ jobs:
         run: pnpm --filter frontend build
         env:
           API_URL: ${{ secrets.API_URL || 'https://api.medika.app' }}
-
-  deploy:
-    needs: check
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install
-        run: pnpm --filter frontend install
-
-      - name: Deploy to Vercel
-        run: |
-          cd apps/frontend
-          npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
