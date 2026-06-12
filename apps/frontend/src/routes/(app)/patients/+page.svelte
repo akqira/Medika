@@ -292,6 +292,10 @@
 							<Icon name="phone" size={14} color="var(--text-muted)" />
 							{selectedPatient.phone}
 						</a>
+						<a href="/patients/{selectedPatient.id}" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg);border:1px solid var(--border);border-radius:7px;text-decoration:none;color:var(--text);font-size:13px">
+							<Icon name="fileText" size={14} color="var(--text-muted)" />
+							Fiche complète
+						</a>
 						<a href="/consultation" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--primary);border-radius:7px;text-decoration:none;color:white;font-size:13px;font-weight:500">
 							<Icon name="stethoscope" size={14} color="white" />
 							Consultation
