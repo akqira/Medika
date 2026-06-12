@@ -5,6 +5,7 @@ using Medika.Api.Middleware;
 using Medika.Infrastructure;
 using Medika.Infrastructure.Auth;
 using Medika.Infrastructure.Persistence;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -12,7 +13,20 @@ using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
 
+// Bootstrap logger — replaced by the full DI-aware configuration in UseSerilog below.
 Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Application Insights — reads APPLICATIONINSIGHTS_CONNECTION_STRING (Azure app setting)
+// or "ApplicationInsights:ConnectionString". Empty connection string = telemetry disabled (safe locally).
+// Auto-collects requests, dependencies (MongoDB/HTTP), exceptions and performance counters.
+builder.Services.AddApplicationInsightsTelemetry();
+
+builder.Host.UseSerilog((ctx, services, lc) => lc
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
@@ -25,10 +39,11 @@ Log.Logger = new LoggerConfiguration()
         o.MinimumEventLevel = Serilog.Events.LogEventLevel.Error;       // Error+ become Sentry events
         o.MinimumBreadcrumbLevel = Serilog.Events.LogEventLevel.Information; // optional
     })
-    .CreateLogger();
-
-var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseSerilog();
+    // Serilog logs (Information+) also flow to App Insights as trace telemetry,
+    // correlated with the originating request. No-op when AI is not configured.
+    .WriteTo.ApplicationInsights(
+        services.GetRequiredService<TelemetryConfiguration>(),
+        TelemetryConverter.Traces));
 
 // Sentry — binds the "Sentry" config section (Dsn, Environment, TracesSampleRate, ...).
 // Empty Dsn (local dev default) makes the SDK a no-op, so this is safe everywhere.
@@ -89,29 +104,4 @@ builder.Services
 builder.Services.AddCors(opts =>
     opts.AddDefaultPolicy(p => p
         .WithOrigins(
-            builder.Configuration["Cors:AllowedOrigins"]?.Split(',') ?? ["http://localhost:5173"])
-        .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
-
-var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var ctx = scope.ServiceProvider.GetRequiredService<MongoContext>();
-    await MongoDbInitializer.InitializeAsync(ctx);
-    await MongoDbInitializer.SeedAsync(ctx);
-}
-
-app.UseExceptionHandler();
-app.UseCors();
-app.UseMiddleware<ApiKeyMiddleware>(); // X-API-KEY + anti-replay timestamp — BFF-only access (eGestion ADR-008)
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseRateLimiter();
-
-app.UseFastEndpoints(c =>
-{
-    c.Errors.UseProblemDetails();
-    c.Serializer.Options.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-}).UseSwaggerGen();
-
-app.Run();
+            builder.Configuration["Cors:AllowedOrigins"]?.Split(',') ?? ["htt
