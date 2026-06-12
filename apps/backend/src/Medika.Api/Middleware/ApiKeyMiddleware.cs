@@ -68,4 +68,50 @@ public class ApiKeyMiddleware
         }
 
         // All other endpoints: require a fresh timestamp (anti-replay)
-        if (!context.Request.Headers.TryGetValue(TimestampHeaderName, out v
+        if (!context.Request.Headers.TryGetValue(TimestampHeaderName, out var tsHeader))
+        {
+            await RejectAsync(context, $"Missing {TimestampHeaderName} header");
+            return;
+        }
+        if (!DateTime.TryParse(tsHeader, null, DateTimeStyles.RoundtripKind, out var requestTime))
+        {
+            await RejectAsync(context, $"Unparseable {TimestampHeaderName} header (expected ISO 8601, got '{tsHeader}')");
+            return;
+        }
+        var skewMinutes = Math.Abs((DateTime.UtcNow - requestTime.ToUniversalTime()).TotalMinutes);
+        if (skewMinutes > TimestampToleranceMinutes)
+        {
+            await RejectAsync(context, $"Stale timestamp: {skewMinutes:F1} min from server UtcNow (tolerance {TimestampToleranceMinutes} min — check clock skew)");
+            return;
+        }
+
+        await _next(context);
+    }
+
+    private static bool CryptographicEquals(string a, string b)
+    {
+        var bytesA = System.Text.Encoding.UTF8.GetBytes(a);
+        var bytesB = System.Text.Encoding.UTF8.GetBytes(b);
+        return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(bytesA, bytesB);
+    }
+
+    /// <summary>
+    /// Logs why the request is rejected (exact gate), then returns a generic 401 whose body
+    /// carries the traceId so frontend logs can be correlated with the App Insights transaction.
+    /// </summary>
+    private async Task RejectAsync(HttpContext context, string reason)
+    {
+        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        _logger.LogWarning(
+            "Request rejected (401) by ApiKeyMiddleware. Reason={Reason} Method={Method} Path={Path} ClientIp={ClientIp}",
+            reason, context.Request.Method, context.Request.Path, clientIp);
+
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "Unauthorized",
+            traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier,
+        });
+    }
+}
