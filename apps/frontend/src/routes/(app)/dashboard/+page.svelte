@@ -21,9 +21,9 @@
 		NoShow:     { bg: 'var(--danger-light)', color: 'var(--danger)' },
 	};
 
-	const remaining  = $derived(data.appointments.filter(a => a.status === 'Pending' || a.status === 'Confirmed').length);
-	const inProgress = $derived(data.appointments.filter(a => a.status === 'InProgress').length);
 	const alertAppts = $derived(data.appointments.filter(a => a.patientAllergies.length > 0));
+
+	const fmt = new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 });
 
 	const todayLabel = $derived(
 		new Date(data.today + 'T00:00:00').toLocaleDateString('fr-FR', {
@@ -53,10 +53,10 @@
 
 	<!-- Stat cards -->
 	<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px">
-		<StatCard label="Patients aujourd'hui" value={data.appointments.length} icon="calendar"    sub="Programme du jour"         trend={8}  />
-		<StatCard label="Restant à voir"        value={remaining}               icon="clock"       color="var(--warning)"  sub="À venir ce jour"           />
-		<StatCard label="En cours"              value={inProgress}              icon="activity"    color="var(--primary)"  sub="Consultations actives"     />
-		<StatCard label="Patients total"        value={data.totalPatients}      icon="users"       color="#7C3AED"         sub="{data.totalPatients} actifs au total" />
+		<StatCard label="Rendez-vous aujourd'hui" value={data.appointments.length}                     icon="calendar" sub="Programme du jour" />
+		<StatCard label="Recette du mois"          value="{fmt.format(data.summary.totalIncome)} DA"     icon="wallet"   color="var(--success)" sub="encaissé ce mois" />
+		<StatCard label="Bénéfice du mois"         value="{fmt.format(data.summary.netIncome)} DA"       icon="barchart" color={data.summary.netIncome >= 0 ? 'var(--primary)' : 'var(--danger)'} sub="net" />
+		<StatCard label="Impayés"                  value="{fmt.format(data.summary.pendingAmount)} DA"   icon="alertCircle" color="var(--warning)" sub="{data.summary.pendingInvoices} facture{data.summary.pendingInvoices !== 1 ? 's' : ''}" />
 	</div>
 
 	<!-- 2-column -->
@@ -64,17 +64,11 @@
 
 		<!-- Programme du jour -->
 		<div class="card" style="overflow:hidden">
-			<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-				<div>
-					<h2 style="font-size:15px;font-weight:600">Programme du jour</h2>
-					<p style="font-size:12.5px;color:var(--text-muted);margin-top:2px">
-						{data.appointments.length} rendez-vous · <span style="text-transform:capitalize">{todayLabel.split(' ').slice(0,3).join(' ')}</span>
-					</p>
-				</div>
-				<a href="/schedule" style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;background:var(--bg);border:1px solid var(--border);border-radius:7px;text-decoration:none;color:var(--text);font-size:13px;font-weight:500">
-					<Icon name="calendar" size={13} color="var(--text-muted)" />
-					Agenda complet
-				</a>
+			<div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+				<h2 style="font-size:15px;font-weight:600">Programme du jour</h2>
+				<p style="font-size:12.5px;color:var(--text-muted);margin-top:2px">
+					{data.appointments.length} rendez-vous · <span style="text-transform:capitalize">{todayLabel.split(' ').slice(0,3).join(' ')}</span>
+				</p>
 			</div>
 
 			{#if data.appointments.length === 0}
@@ -187,3 +181,4 @@
 		</div>
 	</div>
 </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                     

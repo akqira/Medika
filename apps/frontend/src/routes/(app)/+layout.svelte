@@ -54,6 +54,12 @@
 			">
 				<Icon name={item.icon} size={15} color={active ? 'white' : 'rgba(255,255,255,0.6)'} />
 				{item.label}
+				{#if item.href === '/patients' && data.totalPatients > 0}
+					<span style="
+						margin-left:2px;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;
+						background:rgba(94,231,208,0.18);color:#5EE7D0;line-height:1.5;
+					">{data.totalPatients}</span>
+				{/if}
 			</a>
 		{/each}
 	</div>
@@ -134,18 +140,4 @@
 							data-sveltekit-preload-data="off"
 							data-sveltekit-reload
 							onclick={() => showUserMenu = false}
-							style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;text-decoration:none;color:var(--danger);font-size:13.5px;font-weight:500"
-						>
-							<Icon name="logOut" size={15} color="var(--danger)" />
-							Déconnexion
-						</a>
-					</div>
-				</div>
-			{/if}
-		</div>
-	</div>
-</nav>
-
-<main class="mk-content">
-	{@render children()}
-</main>
+							style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;text

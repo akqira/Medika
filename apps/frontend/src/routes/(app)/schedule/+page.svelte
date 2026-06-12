@@ -116,24 +116,32 @@
 		})
 	);
 
-	// Timeline: 08:00–18:00, 52px per 30-min slot
-	const SLOT_H = 52;
+	// Timeline: 08:00–20:00 (12h), fitted to the visible height so the whole day
+	// shows at once without scrolling (falls back to scroll on very short screens).
 	const START_MIN = 8 * 60;
-	const END_MIN   = 18 * 60;
-	const TOTAL_SLOTS = (END_MIN - START_MIN) / 30;
+	const END_MIN   = 20 * 60;
+	const TOTAL_SLOTS = (END_MIN - START_MIN) / 30; // 24 demi-heures
+	const TOP_PAD = 14;
+	const MIN_SLOT_H = 26;
 
-	const timeLines = Array.from({ length: TOTAL_SLOTS + 1 }, (_, i) => {
-		const total = START_MIN + i * 30;
-		const h = Math.floor(total / 60);
-		const m = total % 60;
-		return { top: i * SLOT_H, isHour: m === 0, label: m === 0 ? `${String(h).padStart(2, '0')}:00` : '' };
-	});
+	let timelineH = $state(0); // measured height of the timeline viewport
+	const SLOT_H = $derived(Math.max(MIN_SLOT_H, (timelineH - TOP_PAD - 8) / TOTAL_SLOTS));
+	const innerH = $derived(TOP_PAD + TOTAL_SLOTS * SLOT_H + 8);
+
+	const timeLines = $derived(
+		Array.from({ length: TOTAL_SLOTS + 1 }, (_, i) => {
+			const total = START_MIN + i * 30;
+			const h = Math.floor(total / 60);
+			const m = total % 60;
+			return { top: TOP_PAD + i * SLOT_H, isHour: m === 0, label: m === 0 ? `${String(h).padStart(2, '0')}:00` : '' };
+		})
+	);
 
 	function apptPos(appt: AppointmentSlot) {
 		const [h, m] = appt.time.split(':').map(Number);
 		const startMin = Math.max(START_MIN, Math.min(END_MIN - 30, h * 60 + m));
-		const top    = ((startMin - START_MIN) / 30) * SLOT_H;
-		const height = Math.max((appt.durationMinutes / 30) * SLOT_H - 4, 40);
+		const top    = TOP_PAD + ((startMin - START_MIN) / 30) * SLOT_H;
+		const height = Math.max((appt.durationMinutes / 30) * SLOT_H - 3, 22);
 		return { top, height };
 	}
 
@@ -275,8 +283,8 @@
 	<div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border)">
 
 		<!-- Timeline -->
-		<div style="flex:1;overflow-y:auto;background:var(--surface)">
-			<div style="position:relative;padding-left:64px;height:{TOTAL_SLOTS * SLOT_H + 32}px">
+		<div bind:clientHeight={timelineH} style="flex:1;overflow-y:auto;background:var(--surface)">
+			<div style="position:relative;padding-left:64px;height:{innerH}px">
 
 				{#each timeLines as tl}
 					{#if tl.label}
@@ -315,7 +323,7 @@
 								overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 								{appt.patientName}
 							</div>
-							{#if pos.height > 42}
+							{#if pos.height > 34}
 								<div style="font-size:12px;color:var(--text-muted);margin-top:1px;
 									overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 									{appt.reason || appt.type}
@@ -515,14 +523,4 @@
 									background:{av.bg};color:{av.color};margin-top:1px;
 									display:flex;align-items:center;justify-content:center;
 									font-size:11.5px;font-weight:700">
-									{initials(appt.patientName)}
-								</div>
-								<div style="flex:1;min-width:0">
-									<div style="font-size:13.5px;font-weight:600;color:var(--text)">
-										{appt.patientName}
-									</div>
-									<div style="font-size:12px;color:var(--text-muted);margin-top:2px;
-										overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-										{appt.time} · {appt.reason || appt.type}
-									</div>
-									<div style="margin-top
+									{initials(appt.patie

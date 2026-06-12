@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import type { PageData, ActionData } from './$types';
 	import type { PatientSummary } from '$lib/types/api';
+	import { MEDICAMENTS } from '$lib/data/medicaments';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import QuickAddPatientModal from '$lib/components/QuickAddPatientModal.svelte';
@@ -120,10 +121,24 @@
 			{/if}
 
 			<!-- Patient selector -->
-			<div class="card" style="padding:18px 20px;margin-bottom:16px">
-				<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-					<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Patient</div>
-					{#if !selectedPatient}
+			<input type="hidden" name="patientId" value={selectedPatientId} />
+			{#if selectedPatient}
+				<!-- Compact bar once a patient is chosen — doesn't hog vertical space -->
+				<div class="card" style="padding:8px 12px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+					<Avatar nom={selectedPatient.lastName} prenom={selectedPatient.firstName} sexe={selectedPatient.gender} size={30} />
+					<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+						<span style="font-size:14px;font-weight:600">{selectedPatient.firstName} {selectedPatient.lastName}</span>
+						<span style="font-size:12.5px;color:var(--text-muted)"> · {selectedPatient.age} ans · {selectedPatient.gender === 'F' ? 'Femme' : 'Homme'}</span>
+					</div>
+					<button type="button" onclick={() => selectedPatientId = ''}
+						style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-family:inherit;font-size:12.5px;font-weight:500">
+						Changer <Icon name="x" size={14} />
+					</button>
+				</div>
+			{:else}
+				<div class="card" style="padding:14px 16px;margin-bottom:16px">
+					<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+						<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Patient</div>
 						<button
 							type="button"
 							onclick={() => showQuickAdd = true}
@@ -132,26 +147,8 @@
 							<Icon name="plus" size={12} color="var(--primary)" />
 							Nouveau patient
 						</button>
-					{/if}
-				</div>
-				<input type="hidden" name="patientId" value={selectedPatientId} />
-				{#if selectedPatient}
-					<div style="display:flex;align-items:center;gap:12px">
-						<Avatar nom={selectedPatient.lastName} prenom={selectedPatient.firstName} sexe={selectedPatient.gender} size={40} />
-						<div style="flex:1">
-							<div style="font-size:14.5px;font-weight:600">{selectedPatient.firstName} {selectedPatient.lastName}</div>
-							<div style="font-size:12.5px;color:var(--text-muted);margin-top:2px">{selectedPatient.age} ans · {selectedPatient.gender === 'F' ? 'Femme' : 'Homme'}</div>
-						</div>
-						<button type="button" onclick={() => selectedPatientId = ''} style="background:none;border:none;cursor:pointer;color:var(--text-muted)">
-							<Icon name="x" size={16} />
-						</button>
 					</div>
-				{:else}
-					<select
-						bind:value={selectedPatientId}
-						class="mk-input"
-						style="font-size:14px"
-					>
+					<select bind:value={selectedPatientId} class="mk-input" style="font-size:14px">
 						<option value="">— Sélectionner un patient —</option>
 						{#each patients as p}
 							<option value={p.id}>{p.firstName} {p.lastName} ({p.age} ans)</option>
@@ -160,36 +157,36 @@
 					{#if patients.length === 0}
 						<p style="font-size:12.5px;color:var(--text-muted);margin-top:8px">Aucun patient. Utilisez « Nouveau patient » pour en créer un.</p>
 					{/if}
-				{/if}
-			</div>
+				</div>
+			{/if}
 
 			<!-- Vitals -->
 			<div class="card" style="padding:18px 20px;margin-bottom:16px">
 				<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Constantes vitales</div>
-				<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-					<div>
-						<label for="vital-bp" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Tension (mmHg)</label>
-						<input id="vital-bp" name="bloodPressure" bind:value={bp} class="mk-input" placeholder="ex: 120/80" />
+				<div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end">
+					<div style="width:92px">
+						<label for="vital-bp" style="font-size:11.5px;color:var(--text-muted);display:block;margin-bottom:4px">Tension</label>
+						<input id="vital-bp" name="bloodPressure" bind:value={bp} class="mk-input vital-in" placeholder="120/80" />
 					</div>
-					<div>
-						<label for="vital-pulse" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Pouls (bpm)</label>
-						<input id="vital-pulse" name="pulseRate" bind:value={pulse} class="mk-input" placeholder="ex: 72" />
+					<div style="width:66px">
+						<label for="vital-pulse" style="font-size:11.5px;color:var(--text-muted);display:block;margin-bottom:4px">Pouls</label>
+						<input id="vital-pulse" name="pulseRate" bind:value={pulse} class="mk-input vital-in" placeholder="72" />
 					</div>
-					<div>
-						<label for="vital-temp" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Temp. (°C)</label>
-						<input id="vital-temp" name="temperature" bind:value={temp} class="mk-input" placeholder="ex: 37.2" />
+					<div style="width:66px">
+						<label for="vital-temp" style="font-size:11.5px;color:var(--text-muted);display:block;margin-bottom:4px">Temp.</label>
+						<input id="vital-temp" name="temperature" bind:value={temp} class="mk-input vital-in" placeholder="37.2" />
 					</div>
-					<div>
-						<label for="vital-weight" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Poids (kg)</label>
-						<input id="vital-weight" name="weight" bind:value={weight} class="mk-input" placeholder="ex: 70" />
+					<div style="width:66px">
+						<label for="vital-weight" style="font-size:11.5px;color:var(--text-muted);display:block;margin-bottom:4px">Poids</label>
+						<input id="vital-weight" name="weight" bind:value={weight} class="mk-input vital-in" placeholder="70" />
 					</div>
-					<div>
-						<label for="vital-height" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Taille (cm)</label>
-						<input id="vital-height" name="height" bind:value={height} class="mk-input" type="number" min="0" placeholder="ex: 175" />
+					<div style="width:66px">
+						<label for="vital-height" style="font-size:11.5px;color:var(--text-muted);display:block;margin-bottom:4px">Taille</label>
+						<input id="vital-height" name="height" bind:value={height} class="mk-input vital-in" type="number" min="0" placeholder="175" />
 					</div>
-					<div>
-						<label for="vital-spo2" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">SatO₂ (%)</label>
-						<input id="vital-spo2" name="spO2" bind:value={satO2} class="mk-input" placeholder="ex: 98" />
+					<div style="width:66px">
+						<label for="vital-spo2" style="font-size:11.5px;color:var(--text-muted);display:block;margin-bottom:4px">SatO₂</label>
+						<input id="vital-spo2" name="spO2" bind:value={satO2} class="mk-input vital-in" placeholder="98" />
 					</div>
 				</div>
 			</div>
@@ -261,6 +258,11 @@
 				</button>
 			</div>
 
+			<!-- Autocomplétion médicaments (saisie libre toujours possible) -->
+			<datalist id="med-list">
+				{#each MEDICAMENTS as m}<option value={m}></option>{/each}
+			</datalist>
+
 			<div style="flex:1;overflow-y:auto;padding:16px">
 				{#if medications.length === 0}
 					<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--text-muted);gap:12px;text-align:center">
@@ -280,53 +282,35 @@
 								</button>
 							</div>
 							<div style="display:flex;flex-direction:column;gap:8px">
-								<input
-									value={med.medication}
-									oninput={(e) => updateMed(med.id, 'medication', (e.target as HTMLInputElement).value)}
-									class="mk-input"
-									placeholder="Nom du médicament"
-								/>
-								<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+								<!-- Médicament (autocomplété, saisie libre possible) + posologie sur la même ligne -->
+								<div style="display:flex;gap:8px">
+									<input
+										value={med.medication}
+										oninput={(e) => updateMed(med.id, 'medication', (e.target as HTMLInputElement).value)}
+										list="med-list"
+										class="mk-input"
+										style="flex:1.7;min-width:0"
+										placeholder="Médicament"
+										autocomplete="off"
+									/>
 									<input
 										value={med.dosage}
 										oninput={(e) => updateMed(med.id, 'dosage', (e.target as HTMLInputElement).value)}
 										class="mk-input"
-										placeholder="Posologie"
+										style="flex:1;min-width:0"
+										placeholder="500 mg"
+										title="Posologie / dosage"
 									/>
+								</div>
+								<!-- Prise (champ libre, bref) + durée + quantité -->
+								<div style="display:grid;grid-template-columns:1.5fr 1fr 0.7fr;gap:8px">
 									<input
 										value={med.frequency}
 										oninput={(e) => updateMed(med.id, 'frequency', (e.target as HTMLInputElement).value)}
 										class="mk-input"
-										placeholder="Fréquence"
+										placeholder="Prise (matin et soir…)"
+										title="Prise — texte libre"
 									/>
-								</div>
-								<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
 									<input
 										value={med.duration}
-										oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}
-										class="mk-input"
-										placeholder="Durée (ex: 7 jours)"
-									/>
-									<input
-										type="number"
-										min="1"
-										value={med.quantity}
-										oninput={(e) => updateMed(med.id, 'quantity', Number((e.target as HTMLInputElement).value))}
-										class="mk-input"
-										placeholder="Qté (boîtes)"
-									/>
-								</div>
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-
-			{#if medications.length > 0}
-				<div style="padding:14px 16px;border-top:1px solid var(--border)">
-					<button
-						type="button"
-						style="width:100%;padding:10px;background:var(--bg);color:var(--primary);border:1px solid var(--primary);border-radius:7px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"
-						onclick={() => alert('Impression à implémenter')}
-					>
-						<Icon name="print
+										oninput={(e) => updateMed(med.id, 'duration', (e.target as 
