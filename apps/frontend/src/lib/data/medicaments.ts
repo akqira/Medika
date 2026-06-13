@@ -1,47 +1,73 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Liste de DÉMARRAGE de médicaments (noms commerciaux courants en Algérie).
+// Liste de DÉMARRAGE de médicaments (nom commercial + dosage), Algérie.
 //
-// ⚠️ Ceci n'est qu'un jeu de départ pour l'autocomplétion de l'ordonnance.
-// À remplacer par la **Nomenclature Nationale des Produits Pharmaceutiques**
-// complète (≈ 4800 entrées) publiée par l'ANPP / Ministère de l'Industrie
-// Pharmaceutique, importée depuis le fichier Excel officiel.
-//   Source : https://www.miph.gov.dz/fr/nomenclature-nationale-des-produits-pharmaceutiques/
-//   Point de départ JSON : https://github.com/mahmoudBens/Nomenclature-des-medicaments-en-algerie
+// Chaque entrée porte le dosage → le médecin choisit directement la bonne
+// présentation dans l'autocomplétion, sans ressaisir la posologie.
 //
-// Le médecin peut toujours saisir un nom libre : l'autocomplétion ne contraint pas.
-// Affichage par NOM COMMERCIAL (choix produit). La force/dosage se saisit dans le
-// champ « Posologie » sur la même ligne.
+// ⚠️ Jeu de départ uniquement. À remplacer par la Nomenclature Nationale
+// complète (≈ 4800+ présentations) via :
+//   node apps/frontend/scripts/build-medicaments.mjs
+// qui génère static/medicaments.json (chargé en différé, prioritaire sur cette liste).
+//
+// La saisie libre reste toujours possible (un nom hors liste est conservé tel quel).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const MEDICAMENTS: string[] = [
 	// Antalgiques / antipyrétiques
-	'Doliprane', 'Efferalgan', 'Dafalgan', 'Perfalgan', 'Paracétamol',
-	'Aspégic', 'Aspirine', 'Ibuprofène', 'Brufen', 'Nurofen',
+	'Doliprane 500mg comprimé', 'Doliprane 1g comprimé', 'Doliprane 1000mg comprimé',
+	'Doliprane 2.4% suspension buvable', 'Doliprane 150mg suppositoire',
+	'Efferalgan 500mg comprimé', 'Efferalgan 1g comprimé', 'Efferalgan 150mg suppositoire',
+	'Dafalgan 500mg comprimé', 'Dafalgan 1g comprimé',
+	'Paracétamol 500mg comprimé', 'Paracétamol 1g comprimé',
+	'Aspégic 100mg sachet', 'Aspégic 500mg sachet', 'Aspégic 1000mg sachet',
+	'Aspirine 500mg comprimé',
 	// AINS
-	'Voltarène', 'Diclofénac', 'Profenid', 'Kétoprofène', 'Feldène', 'Mobic', 'Célébrex',
+	'Ibuprofène 200mg comprimé', 'Ibuprofène 400mg comprimé',
+	'Brufen 400mg comprimé', 'Nurofen 200mg comprimé', 'Nurofen 400mg comprimé',
+	'Voltarène 50mg comprimé', 'Voltarène 75mg comprimé', 'Voltarène 100mg suppositoire',
+	'Diclofénac 50mg comprimé', 'Profenid 100mg comprimé', 'Kétoprofène 100mg comprimé',
+	'Feldène 20mg comprimé', 'Mobic 7.5mg comprimé', 'Mobic 15mg comprimé',
 	// Antibiotiques
-	'Augmentin', 'Amoxicilline', 'Clamoxyl', 'Amoxil', 'Zinnat', 'Céfuroxime',
-	'Rocéphine', 'Ciprofloxacine', 'Ciflox', 'Oflocet', 'Ofloxacine',
-	'Bactrim', 'Flagyl', 'Métronidazole', 'Zithromax', 'Azithromycine',
-	'Klacid', 'Clarithromycine', 'Doxycycline', 'Péni G', 'Erythromycine',
+	'Augmentin 500mg comprimé', 'Augmentin 1g comprimé', 'Augmentin 1g sachet',
+	'Augmentin 100mg/12.5mg suspension buvable',
+	'Amoxicilline 250mg gélule', 'Amoxicilline 500mg gélule', 'Amoxicilline 1g comprimé',
+	'Clamoxyl 500mg gélule', 'Clamoxyl 1g comprimé', 'Amoxil 500mg gélule',
+	'Zinnat 250mg comprimé', 'Zinnat 500mg comprimé', 'Céfuroxime 500mg comprimé',
+	'Rocéphine 1g injectable', 'Ciprofloxacine 500mg comprimé', 'Ciflox 500mg comprimé',
+	'Oflocet 200mg comprimé', 'Ofloxacine 200mg comprimé',
+	'Bactrim forte comprimé', 'Flagyl 500mg comprimé', 'Métronidazole 500mg comprimé',
+	'Zithromax 250mg comprimé', 'Azithromycine 250mg comprimé', 'Azithromycine 500mg comprimé',
+	'Klacid 500mg comprimé', 'Clarithromycine 500mg comprimé', 'Doxycycline 100mg comprimé',
 	// ORL / respiratoire
-	'Ventoline', 'Salbutamol', 'Symbicort', 'Seretide', 'Sérétide',
-	'Solupred', 'Célestène', 'Prednisolone', 'Aerius', 'Zyrtec', 'Clarityne',
-	'Toplexil', 'Bronchokod', 'Rhinathiol', 'Maxilase',
+	'Ventoline 100µg spray', 'Salbutamol 100µg spray',
+	'Symbicort 160/4.5µg inhalateur', 'Seretide 250µg inhalateur',
+	'Solupred 20mg comprimé', 'Célestène 0.5mg comprimé', 'Prednisolone 20mg comprimé',
+	'Aerius 5mg comprimé', 'Zyrtec 10mg comprimé', 'Clarityne 10mg comprimé',
+	'Toplexil sirop', 'Bronchokod 5% sirop', 'Rhinathiol sirop', 'Maxilase comprimé',
 	// Gastro
-	'Inexium', 'Esoméprazole', 'Mopral', 'Oméprazole', 'Lanzor',
-	'Gaviscon', 'Maalox', 'Smecta', 'Spasfon', 'Débridat', 'Motilium',
-	'Imodium', 'Forlax', 'Duphalac',
+	'Inexium 20mg comprimé', 'Inexium 40mg comprimé', 'Esoméprazole 20mg comprimé',
+	'Mopral 20mg gélule', 'Oméprazole 20mg gélule',
+	'Gaviscon suspension buvable', 'Maalox suspension buvable', 'Smecta 3g sachet',
+	'Spasfon 80mg comprimé', 'Débridat 100mg comprimé', 'Motilium 10mg comprimé',
+	'Imodium 2mg gélule', 'Forlax 10g sachet', 'Duphalac sirop',
 	// Cardio / métabolisme
-	'Amlor', 'Amlodipine', 'Tahor', 'Atorvastatine', 'Crestor',
-	'Kardégic', 'Plavix', 'Lasilix', 'Furosémide', 'Aldactone',
-	'Coversyl', 'Triatec', 'Ramipril', 'Loxen', 'Bisoprolol',
-	'Glucophage', 'Metformine', 'Diamicron', 'Amarel', 'Lantus', 'Janumet',
-	'Levothyrox', 'Lévothyroxine',
-	// Neuro / psy / antalgie
-	'Atarax', 'Lexomil', 'Stilnox', 'Lyrica', 'Tegretol', 'Dépakine',
-	'Laroxyl', 'Seroplex', 'Xanax',
+	'Amlor 5mg gélule', 'Amlor 10mg gélule', 'Amlodipine 5mg comprimé',
+	'Tahor 10mg comprimé', 'Tahor 20mg comprimé', 'Atorvastatine 20mg comprimé',
+	'Crestor 10mg comprimé', 'Crestor 20mg comprimé',
+	'Kardégic 75mg sachet', 'Kardégic 160mg sachet', 'Plavix 75mg comprimé',
+	'Lasilix 40mg comprimé', 'Furosémide 40mg comprimé', 'Aldactone 25mg comprimé',
+	'Coversyl 5mg comprimé', 'Triatec 5mg comprimé', 'Ramipril 5mg comprimé',
+	'Loxen 20mg comprimé', 'Bisoprolol 5mg comprimé',
+	'Glucophage 500mg comprimé', 'Glucophage 850mg comprimé', 'Glucophage 1000mg comprimé',
+	'Metformine 850mg comprimé', 'Diamicron 30mg comprimé', 'Diamicron 60mg comprimé',
+	'Amarel 2mg comprimé', 'Amarel 4mg comprimé', 'Lantus 100UI/ml stylo',
+	'Levothyrox 50µg comprimé', 'Levothyrox 75µg comprimé', 'Levothyrox 100µg comprimé',
+	// Neuro / psy
+	'Atarax 25mg comprimé', 'Lexomil 6mg comprimé', 'Stilnox 10mg comprimé',
+	'Lyrica 75mg gélule', 'Lyrica 150mg gélule', 'Tegretol 200mg comprimé',
+	'Dépakine 500mg comprimé', 'Laroxyl 25mg comprimé', 'Seroplex 10mg comprimé',
 	// Divers
-	'Cortancyl', 'Daflon', 'Spedifen', 'Calcium D3', 'Tardyféron',
-	'Speciafoldine', 'Vitamine D', 'Magné B6',
+	'Cortancyl 5mg comprimé', 'Cortancyl 20mg comprimé', 'Daflon 500mg comprimé',
+	'Spedifen 400mg comprimé', 'Calcium D3 comprimé', 'Tardyféron 80mg comprimé',
+	'Speciafoldine 5mg comprimé', 'Vitamine D 100000UI ampoule', 'Magné B6 comprimé',
 ];

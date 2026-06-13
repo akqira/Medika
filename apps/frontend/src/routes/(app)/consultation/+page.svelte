@@ -7,6 +7,7 @@
 	import { MEDICAMENTS } from '$lib/data/medicaments';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import Combobox from '$lib/components/Combobox.svelte';
 	import QuickAddPatientModal from '$lib/components/QuickAddPatientModal.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -115,10 +116,10 @@
 	<input type="hidden" name="appointmentId" value={appointmentId} />
 	<input type="hidden" name="prescription" value={prescriptionJson} />
 
-	<div style="display:flex;height:calc(100vh - 58px);overflow:hidden">
+	<div style="height:calc(100vh - 58px);overflow-y:auto;background:var(--bg)">
 
-		<!-- Left: form -->
-		<div style="flex:1;overflow-y:auto;padding:24px;background:var(--bg)">
+		<!-- Colonne unique — ordonnance en pleine largeur plus bas -->
+		<div style="max-width:980px;margin:0 auto;padding:24px 24px 40px">
 			<h1 style="font-size:18px;font-weight:700;margin-bottom:20px">Nouvelle consultation</h1>
 
 			<!-- Error / success banners -->
@@ -236,8 +237,86 @@
 				</div>
 			</div>
 
-			<!-- Action buttons -->
-			<div style="display:flex;gap:10px">
+			<!-- Ordonnance — section pleine largeur -->
+			<div class="card" style="padding:0;margin-bottom:16px">
+				<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+					<div>
+						<h2 style="font-size:14.5px;font-weight:600">Ordonnance</h2>
+						<p style="font-size:12px;color:var(--text-muted);margin-top:2px">{medications.length} médicament{medications.length !== 1 ? 's' : ''}</p>
+					</div>
+					<button
+						type="button"
+						onclick={addMed}
+						style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--primary);color:white;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer"
+					>
+						<Icon name="plus" size={14} color="white" />
+						Ajouter un médicament
+					</button>
+				</div>
+
+			<div style="padding:16px 20px">
+				{#if medications.length === 0}
+					<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--text-muted);gap:12px;text-align:center">
+						<Icon name="fileText" size={36} color="var(--border-strong)" />
+						<div>
+							<p style="font-size:14px;font-weight:500">Aucun médicament</p>
+							<p style="font-size:12.5px;margin-top:4px">Cliquez sur « Ajouter » pour commencer</p>
+						</div>
+					</div>
+				{:else}
+					<!-- En-têtes de colonnes -->
+					<div class="ord-grid ord-head">
+						<span class="ord-h">Médicament</span>
+												<span class="ord-h">Prise</span>
+						<span class="ord-h">Durée</span>
+						<span class="ord-h" style="text-align:center">Qté</span>
+						<span></span>
+					</div>
+					{#each medications as med}
+						<div class="ord-grid">
+							<Combobox
+								value={med.medication}
+								options={medList}
+								placeholder="Médicament"
+								onInput={(v) => updateMed(med.id, 'medication', v)}
+								style="width:100%;min-width:0"
+							/>
+							<input
+								value={med.dosage}
+								oninput={(e) => updateMed(med.id, 'dosage', (e.target as HTMLInputElement).value)}
+								type="hidden" tabindex="-1" />
+							<input
+								value={med.frequency}
+								oninput={(e) => updateMed(med.id, 'frequency', (e.target as HTMLInputElement).value)}
+								class="mk-input" style="min-width:0" placeholder="matin et soir…" title="Prise — texte libre" />
+							<input
+								value={med.duration}
+								oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}
+								class="mk-input" style="min-width:0" placeholder="7j" title="Durée" />
+							<input
+								type="number" min="1"
+								value={med.quantity}
+								oninput={(e) => updateMed(med.id, 'quantity', Number((e.target as HTMLInputElement).value))}
+								class="mk-input" style="min-width:0;text-align:center" placeholder="Qté" title="Quantité (boîtes)" />
+							<button type="button" onclick={() => removeMed(med.id)} aria-label="Retirer le médicament"
+								style="display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--danger);height:38px">
+								<Icon name="trash" size={15} color="var(--danger)" />
+							</button>
+						</div>
+					{/each}
+				{/if}
+			</div>
+
+			{#if medications.length > 0}
+				<div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;color:var(--text-muted)">
+					<Icon name="printer" size={14} color="var(--text-muted)" />
+					<span style="font-size:12px;line-height:1.4">L'ordonnance s'imprime depuis le dossier patient une fois la consultation enregistrée.</span>
+				</div>
+			{/if}
+		</div>
+
+			<!-- Actions -->
+			<div style="display:flex;gap:10px;margin-bottom:8px">
 				<button
 					type="submit"
 					disabled={submitting}
@@ -254,108 +333,8 @@
 					{submitting ? 'Finalisation…' : 'Finaliser la consultation'}
 				</button>
 			</div>
+
 		</div>
-
-		<!-- Right: prescription editor -->
-		<div style="width:360px;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0">
-			<div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-				<div>
-					<h2 style="font-size:14.5px;font-weight:600">Ordonnance</h2>
-					<p style="font-size:12px;color:var(--text-muted);margin-top:2px">{medications.length} médicament{medications.length !== 1 ? 's' : ''}</p>
-				</div>
-				<button
-					type="button"
-					onclick={addMed}
-					style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--primary);color:white;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer"
-				>
-					<Icon name="plus" size={14} color="white" />
-					Ajouter
-				</button>
-			</div>
-
-			<!-- Autocomplétion médicaments (saisie libre toujours possible) -->
-			<datalist id="med-list">
-				{#each medList as m}<option value={m}></option>{/each}
-			</datalist>
-
-			<div style="flex:1;overflow-y:auto;padding:16px">
-				{#if medications.length === 0}
-					<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--text-muted);gap:12px;text-align:center">
-						<Icon name="fileText" size={36} color="var(--border-strong)" />
-						<div>
-							<p style="font-size:14px;font-weight:500">Aucun médicament</p>
-							<p style="font-size:12.5px;margin-top:4px">Cliquez sur « Ajouter » pour commencer</p>
-						</div>
-					</div>
-				{:else}
-					{#each medications as med}
-						<div class="card" style="padding:14px;margin-bottom:10px">
-							<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-								<span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px">Médicament</span>
-								<button type="button" onclick={() => removeMed(med.id)} style="background:none;border:none;cursor:pointer;color:var(--danger);display:flex;align-items:center">
-									<Icon name="trash" size={14} color="var(--danger)" />
-								</button>
-							</div>
-							<div style="display:flex;flex-direction:column;gap:8px">
-								<!-- Médicament (autocomplété, saisie libre possible) + posologie sur la même ligne -->
-								<div style="display:flex;gap:8px">
-									<input
-										value={med.medication}
-										oninput={(e) => updateMed(med.id, 'medication', (e.target as HTMLInputElement).value)}
-										list="med-list"
-										class="mk-input"
-										style="flex:1.7;min-width:0"
-										placeholder="Médicament"
-										autocomplete="off"
-									/>
-									<input
-										value={med.dosage}
-										oninput={(e) => updateMed(med.id, 'dosage', (e.target as HTMLInputElement).value)}
-										class="mk-input"
-										style="flex:1;min-width:0"
-										placeholder="500 mg"
-										title="Posologie / dosage"
-									/>
-								</div>
-								<!-- Prise (champ libre, bref) + durée + quantité -->
-								<div style="display:grid;grid-template-columns:1.5fr 1fr 0.7fr;gap:8px">
-									<input
-										value={med.frequency}
-										oninput={(e) => updateMed(med.id, 'frequency', (e.target as HTMLInputElement).value)}
-										class="mk-input"
-										placeholder="Prise (matin et soir…)"
-										title="Prise — texte libre"
-									/>
-									<input
-										value={med.duration}
-										oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}
-										class="mk-input"
-										placeholder="Durée (7j)"
-									/>
-									<input
-										type="number"
-										min="1"
-										value={med.quantity}
-										oninput={(e) => updateMed(med.id, 'quantity', Number((e.target as HTMLInputElement).value))}
-										class="mk-input"
-										placeholder="Qté"
-										title="Quantité (boîtes)"
-									/>
-								</div>
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-
-			{#if medications.length > 0}
-				<div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;color:var(--text-muted)">
-					<Icon name="printer" size={14} color="var(--text-muted)" />
-					<span style="font-size:12px;line-height:1.4">L'ordonnance s'imprime depuis le dossier patient une fois la consultation enregistrée.</span>
-				</div>
-			{/if}
-		</div>
-
 	</div>
 </form>
 
@@ -365,5 +344,25 @@
 		padding: 7px 8px !important;
 		font-size: 13px !important;
 		text-align: center;
+	}
+	/* Ordonnance — lignes pleine largeur, colonnes alignées */
+	.ord-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 2.8fr) minmax(0, 1.6fr) minmax(0, 1fr) 72px 32px;
+		gap: 8px;
+		align-items: center;
+		margin-bottom: 9px;
+	}
+	.ord-head { margin-bottom: 4px; padding: 0 2px; }
+	.ord-h {
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.4px;
+	}
+	@media (max-width: 720px) {
+		.ord-grid { grid-template-columns: 1fr 1fr; }
+		.ord-head { display: none; }
 	}
 </style>
