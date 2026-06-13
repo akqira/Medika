@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import type { PageData, ActionData } from './$types';
 	import type { PatientSummary } from '$lib/types/api';
@@ -41,6 +42,20 @@
 	let diagnosis      = $state('');
 	let notes          = $state('');
 	let fee            = $state('');
+
+	// Liste médicaments : démarre sur le jeu intégré, puis remplace par la
+	// nomenclature complète (static/medicaments.json) si elle a été générée.
+	let medList = $state<string[]>(MEDICAMENTS);
+	onMount(async () => {
+		try {
+			const res = await fetch('/medicaments.json');
+			if (!res.ok) return;
+			const full = await res.json();
+			if (Array.isArray(full) && full.length) medList = full as string[];
+		} catch {
+			/* connexion indisponible → on garde la liste de démarrage */
+		}
+	});
 
 	// Prescription
 	type Med = { id: number; medication: string; dosage: string; frequency: string; duration: string; quantity: number };
@@ -260,7 +275,7 @@
 
 			<!-- Autocomplétion médicaments (saisie libre toujours possible) -->
 			<datalist id="med-list">
-				{#each MEDICAMENTS as m}<option value={m}></option>{/each}
+				{#each medList as m}<option value={m}></option>{/each}
 			</datalist>
 
 			<div style="flex:1;overflow-y:auto;padding:16px">
