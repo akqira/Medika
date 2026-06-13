@@ -28,4 +28,8 @@
 		"vitest": "^3.2.4"
 	},
 	"dependencies": {
-		"@fontsource/dm-sans": "^5
+		"@fontsource/dm-sans": "^5.2.8",
+		"@sentry/sveltekit": "^10.57.0",
+		"bits-ui": "^2.18.1"
+	}
+}

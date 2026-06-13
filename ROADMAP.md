@@ -33,4 +33,76 @@ Le frein principal n'est pas le nombre de features mais la **finition** : ergono
 
 ### Facturation (vérification)
 - S'assurer que la facturation fonctionne **à 100 %**.
-- Mode de paiement Algérie = **Espèces
+- Mode de paiement Algérie = **Espèces uniquement** (retirer carte/chèque de l'UI pour l'instant).
+- Retirer l'action du bouton **TEL** : garder le numéro visible, mais **sans action cliquable**.
+
+---
+
+## Phase 1 · Refonte Fiche Patient
+> La remarque la plus structurante. Aujourd'hui la fiche ressemble à une « fiche produit » (tuiles), pas à un dossier médical.
+> Réf. design : `docs/Kaki/images/design-medical.pdf` + `medical-record.webp`.
+
+- Repenser la fiche en **vrai dossier patient** : colonne identité/infos à gauche, contenu clinique structuré à droite (antécédents, dernières consultations, constantes, ordonnances).
+- **Recherche patient (sidebar)** : navigation clavier (↑ ↓ + Entrée) dans les résultats.
+- **Performance liste patients** : pas de chargement total au démarrage → **pagination / infinite scroll** + recherche serveur limitée (adapté connexion bas débit, voir doc feedback pour la stratégie).
+- Bloc **Consultations** dans la fiche :
+  - Bouton **« Ajouter une consultation »** depuis le dossier → ouvre une consultation avec le patient déjà sélectionné.
+  - Clic sur une consultation existante → afficher ce que le médecin a saisi : **constantes vitales, anamnèse, notes complémentaires, diagnostic & honoraires**.
+  - **Ordonnance imprimable** depuis le détail de consultation (ouvrir / lancer l'impression).
+- Trancher l'utilité de la **« fiche complète patient »** (voir doc feedback — proposition : la fusionner dans le nouveau dossier).
+
+---
+
+## Phase 2 · Feature Agenda (epic dédié)
+> Identifié par Kader comme « beaucoup de travail à venir ». Mérite son propre chantier.
+> Réf. design : `docs/Kaki/images/calendar.webp`.
+
+- Corriger l'affichage actuel : trop zoomé, navigation peu fluide/intuitive.
+- Bouton **« Aujourd'hui »** pour revenir à la date du jour.
+- Supprimer le **doublon** du bouton « Nouveau RDV » (un seul, en haut).
+- Vue **semaine** affichant la **journée entière** (~12 h visibles d'un coup, pas une fenêtre de 6 h).
+- À détailler en spec dédiée (vues jour/semaine/mois, création/déplacement de RDV, statuts).
+
+---
+
+## Phase 3 · Consultation & Ordonnance — ergonomie de saisie
+> Principe directeur : le médecin écrit **vite**, peu de clics, peu d'allers-retours clavier/souris.
+
+- **Dropdown patient** : compacter (ne pas garder une grande zone une fois le patient sélectionné).
+- **Constantes vitales** : champs courts (5-6 caractères) → resserrer la mise en page, arrêter de gaspiller l'espace.
+- Anamnèse / Examen : OK pour l'instant.
+- **Ordonnance** :
+  - **Liste de médicaments** auto-complétée à partir de la **Nomenclature Nationale des Produits Pharmaceutiques** (source officielle ANPP / Ministère de l'Industrie Pharmaceutique) + possibilité pour le médecin d'ajouter un médicament libre. Détails sourcing dans le doc feedback.
+  - **Posologie** saisie sur la même ligne que le nom du médicament (gain de place).
+  - Remplacer le champ ambigu **« Fréquence »** par un format bref à valider (proposition dans le doc feedback).
+
+---
+
+## Phase 4 · Finances (à cadrer)
+> Rien n'a encore été proposé côté produit. Périmètre à définir avec Kader (questions dans le doc feedback).
+
+Pistes (à confirmer) : total du jour / du mois, recettes par période, suivi de dépenses par catégorie, P&L mensuel simple.
+
+---
+
+## Plus tard (backlog priorisé)
+- **Gestion des versements** : encaissement partiel d'une facture (acompte + reliquat). Nécessite un modèle de paiements multiples par facture.
+- Idées de tuiles dashboard de remplacement (voir doc feedback).
+- Prise de RDV par le patient (URL publique) — design d'abord.
+- Cabinet multi-médecins, rôles (médecin / secrétaire), vue consolidée.
+
+---
+
+## Décisions d'architecture (à garder)
+1. **Chaque document porte `cabinetId` + `doctorId`** dès maintenant, même en mono-médecin — agréger plus tard = un `$group`, pas une migration.
+2. **Ordonnance générée côté serveur** — en-tête configurable par cabinet dès le départ.
+3. **Modèle finance pensé pour l'agrégation** — paiements et dépenses dans leurs propres collections, pas en embarqué.
+4. **Liste patients paginée côté serveur** dès la refonte — ne jamais charger tout le jeu de données (contrainte bas débit Algérie).
+
+---
+
+## Hors périmètre (pas maintenant)
+- Import relevés bancaires
+- Intégration CNAS / assurance
+- App mobile
+- Insights IA

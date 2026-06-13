@@ -19,4 +19,18 @@ export const load: PageServerLoad = async ({ cookies }) => {
 			.catch(() => [] as AppointmentSlot[]),
 		api.get<PagedResult<PatientSummary>>('/api/patients?page=1&pageSize=6', token)
 			.catch((): PagedResult<PatientSummary> => ({
-				items: [],
+				items: [], totalCount: 0, page: 1, pageSize: 6,
+				totalPages: 0, hasNextPage: false, hasPreviousPage: false
+			})),
+		api.get<FinancialSummary>(`/api/finance/summary?year=${now.getFullYear()}&month=${now.getMonth() + 1}`, token)
+			.catch(() => emptySummary)
+	]);
+
+	return {
+		appointments,
+		recentPatients: patientsResult.items,
+		totalPatients: patientsResult.totalCount,
+		summary,
+		today
+	};
+};

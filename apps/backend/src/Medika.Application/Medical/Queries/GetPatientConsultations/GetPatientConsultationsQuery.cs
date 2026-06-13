@@ -35,4 +35,35 @@ public record ConsultationSummary(
 /// </summary>
 public record ConsultationMetadata(
     string ConsultationId,
-    DateT
+    DateTime Date,
+    bool IsFinalized);
+
+public record ConsultationDetail(
+    string ConsultationId,
+    string PatientId,
+    string DoctorId,
+    string? AppointmentId,
+    DateTime Date,
+    string Reason,
+    string? ClinicalExam,
+    string? Diagnosis,
+    string? Notes,
+    VitalSignsDetail? VitalSigns,
+    List<PrescriptionLineDetail> Prescription,
+    decimal Tariff,
+    bool IsFinalized);
+
+public record VitalSignsDetail(
+    string? BloodPressure,
+    int? PulseRate,
+    decimal? Weight,
+    decimal? Temperature,
+    int? SpO2,
+    decimal? Height);
+
+public record PrescriptionLineDetail(
+    string Medication,
+    string Dosage,
+    string? Duration,
+    int Quantity,
+    string? Frequency);

@@ -23,4 +23,19 @@ public class GetPatientConsultationsHandler(
 
         IReadOnlyList<object> projected = isDoctor
             ? items.Select(c => (object)new ConsultationSummary(
-   
+                c.Id.ToString(),
+                c.Date,
+                c.Reason,
+                c.Diagnosis,
+                c.Tariff,
+                c.IsFinalized,
+                c.Prescription.Count,
+                c.AppointmentId)).ToList()
+            : items.Select(c => (object)new ConsultationMetadata(
+                c.Id.ToString(),
+                c.Date,
+                c.IsFinalized)).ToList();
+
+        return new ConsultationListResult(query.PatientId, total, query.Page, query.PageSize, projected);
+    }
+}

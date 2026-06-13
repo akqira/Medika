@@ -22,4 +22,7 @@ public class GetPatientConsultationsEndpoint : Endpoint<GetPatientConsultationsR
     public override async Task<ConsultationListResult> ExecuteAsync(GetPatientConsultationsRequest req, CancellationToken ct)
     {
         var page = req.Page < 1 ? 1 : req.Page;
-        var pageSize = req.PageSize is < 1 or > 100 ? 20 : req.PageSize
+        var pageSize = req.PageSize is < 1 or > 100 ? 20 : req.PageSize;
+        return await new GetPatientConsultationsQuery(req.Id, page, pageSize).ExecuteAsync(ct);
+    }
+}

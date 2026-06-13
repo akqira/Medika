@@ -19,4 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference In
+    <ProjectReference Include="..\Medika.Application\Medika.Application.csproj" />
+    <ProjectReference Include="..\Medika.Infrastructure\Medika.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

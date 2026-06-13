@@ -44,4 +44,9 @@ public class GetPatientByIdHandler(
             patient.InsuranceProvider,
             patient.MutualInsurance,
             patient.CurrentTreatment,
-            
+            patient.Allergies,
+            patient.MedicalHistory,
+            patient.LastVisitAt?.ToString("o"),
+            patient.CreatedAt.ToString("o"));
+    }
+}

@@ -195,4 +195,286 @@
 						{#if patient.allergies.length > 0}
 							<div>
 								<div style="font-size:12px;font-weight:600;color:var(--danger);margin-bottom:7px;display:flex;align-items:center;gap:6px">
-									<Icon name="alertCircle" size={13} color="var(-
+									<Icon name="alertCircle" size={13} color="var(--danger)" /> Allergies
+								</div>
+								<div style="display:flex;flex-wrap:wrap;gap:6px">
+									{#each patient.allergies as a}
+										<span style="background:var(--danger-light);color:var(--danger);font-size:12.5px;font-weight:500;padding:4px 11px;border-radius:20px">{a}</span>
+									{/each}
+								</div>
+							</div>
+						{/if}
+						{#if patient.medicalHistory.length > 0}
+							<div>
+								<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:7px">Antécédents médicaux</div>
+								<div style="display:flex;flex-wrap:wrap;gap:6px">
+									{#each patient.medicalHistory as h}
+										<span style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:12.5px;padding:4px 11px;border-radius:20px">{h}</span>
+									{/each}
+								</div>
+							</div>
+						{/if}
+						{#if patient.currentTreatment}
+							<div>
+								<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:5px">Traitement en cours</div>
+								<div style="font-size:13.5px;line-height:1.5">{patient.currentTreatment}</div>
+							</div>
+						{/if}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Consultations -->
+			<section>
+				<div class="sec-title">Consultations {#if !consultations.failed}<span style="color:var(--text-light);font-weight:500">· {consultations.data.length}</span>{/if}</div>
+
+				{#if consultations.failed}
+					<div style="display:flex;align-items:center;gap:8px;padding:14px 16px;background:var(--danger-light);border:1px solid #FECACA;border-radius:8px">
+						<Icon name="alertCircle" size={15} color="var(--danger)" />
+						<span style="font-size:13.5px;color:var(--danger)">Impossible de charger les consultations.</span>
+					</div>
+				{:else if consultations.data.length === 0}
+					<div class="card" style="display:flex;flex-direction:column;align-items:center;padding:36px 20px;text-align:center;color:var(--text-muted)">
+						<Icon name="fileText" size={30} color="var(--border-strong)" />
+						<p style="margin-top:10px;font-size:14px;font-weight:500">Aucune consultation</p>
+						<a href="/consultation?patientId={patient.id}" style="margin-top:12px;display:inline-flex;align-items:center;gap:6px;padding:8px 15px;background:var(--primary);color:white;border-radius:7px;text-decoration:none;font-size:13px;font-weight:600">
+							<Icon name="stethoscope" size={13} color="white" /> Démarrer la première consultation
+						</a>
+					</div>
+				{:else}
+					<div style="display:flex;flex-direction:column;gap:8px">
+						{#each consultations.data as c}
+							{@const open = expandedId === c.consultationId}
+							{@const detail = detailCache[c.consultationId]}
+							<div class="card" style="overflow:hidden;{open ? 'border-color:var(--primary-light)' : ''}">
+								<!-- Row (clickable) -->
+								<button type="button" onclick={() => toggleConsultation(c.consultationId)}
+									style="display:flex;align-items:center;gap:14px;width:100%;padding:13px 18px;background:none;border:none;cursor:pointer;font-family:inherit;text-align:left">
+									<div style="flex-shrink:0;text-align:center;min-width:42px">
+										<div style="font-size:18px;font-weight:700;color:var(--primary);line-height:1">{new Date(c.date).getDate()}</div>
+										<div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;margin-top:1px">{monthShort(c.date)}</div>
+									</div>
+									<div style="width:1px;height:34px;background:var(--border);flex-shrink:0"></div>
+									<div style="flex:1;min-width:0">
+										<div style="font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{c.reason || 'Consultation'}</div>
+										{#if c.diagnosis}
+											<div style="font-size:12px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{c.diagnosis}</div>
+										{/if}
+									</div>
+									{#if (c.prescriptionCount ?? 0) > 0}
+										<span title="Ordonnance" style="flex-shrink:0;color:var(--text-muted);display:inline-flex"><Icon name="fileText" size={15} color="var(--text-muted)" /></span>
+									{/if}
+									{#if c.isFinalized}
+										<Badge variant="success">Finalisée</Badge>
+									{:else}
+										<Badge variant="warning">Brouillon</Badge>
+									{/if}
+									<Icon name="chevronDown" size={15} color="var(--text-muted)" style={open ? 'transform:rotate(180deg);transition:transform 0.15s' : 'transition:transform 0.15s'} />
+								</button>
+
+								<!-- Detail panel -->
+								{#if open}
+									<div style="border-top:1px solid var(--border);padding:16px 18px;background:var(--bg)">
+										{#if detail === 'loading' || detail === undefined}
+											<div style="font-size:13px;color:var(--text-muted);padding:8px 0">Chargement du détail…</div>
+										{:else if detail === 'error'}
+											<div style="font-size:13px;color:var(--danger)">Impossible de charger le détail de la consultation.</div>
+										{:else}
+											<!-- Constantes vitales -->
+											{@const vitals = vitalList(detail.vitalSigns)}
+											{#if vitals.length > 0}
+												<div class="det-label">Constantes vitales</div>
+												<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+													{#each vitals as v}
+														<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;min-width:74px">
+															<div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px">{v.label}</div>
+															<div style="font-size:14px;font-weight:600;margin-top:1px">{v.val}</div>
+														</div>
+													{/each}
+												</div>
+											{/if}
+
+											{#if detail.reason}
+												<div class="det-label">Anamnèse / motif</div>
+												<p class="det-text">{detail.reason}</p>
+											{/if}
+											{#if detail.clinicalExam}
+												<div class="det-label">Examen clinique</div>
+												<p class="det-text">{detail.clinicalExam}</p>
+											{/if}
+											{#if detail.notes}
+												<div class="det-label">Notes complémentaires</div>
+												<p class="det-text">{detail.notes}</p>
+											{/if}
+
+											<!-- Diagnostic + honoraires -->
+											<div style="display:flex;flex-wrap:wrap;gap:24px;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)">
+												<div style="flex:1;min-width:180px">
+													<div class="det-label" style="margin-top:0">Diagnostic</div>
+													<p class="det-text" style="margin-bottom:0">{detail.diagnosis || '—'}</p>
+												</div>
+												<div>
+													<div class="det-label" style="margin-top:0">Honoraires</div>
+													<div style="font-size:16px;font-weight:700;color:var(--primary)">{fmt.format(detail.tariff)} DA</div>
+												</div>
+											</div>
+
+											<!-- Ordonnance -->
+											{#if detail.prescription.length > 0}
+												<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+													<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+														<div class="det-label" style="margin-top:0">Ordonnance</div>
+														<a href="/api/patients/{patient.id}/consultations/{c.consultationId}/ordonnance" target="_blank" rel="noopener"
+															style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:7px;text-decoration:none;color:var(--text);font-size:12.5px;font-weight:600">
+															<Icon name="printer" size={13} color="var(--primary)" /> Imprimer l'ordonnance
+														</a>
+													</div>
+													<div style="display:flex;flex-direction:column;gap:6px">
+														{#each detail.prescription as m}
+															<div style="display:flex;align-items:baseline;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 12px">
+																<Icon name="activity" size={13} color="var(--primary)" />
+																<span style="font-size:13.5px;font-weight:600">{m.medication}{#if m.dosage}<span style="font-weight:400;color:var(--text-muted)"> · {m.dosage}</span>{/if}</span>
+																<span style="flex:1"></span>
+																<span style="font-size:12.5px;color:var(--text-muted);text-align:right">{[m.frequency, m.duration].filter(Boolean).join(' · ')}</span>
+															</div>
+														{/each}
+													</div>
+												</div>
+											{/if}
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</section>
+
+			<!-- Facturation -->
+			<section>
+				<div class="sec-title">Facturation</div>
+				{#if invoices.failed}
+					<div style="display:flex;align-items:center;gap:8px;padding:14px 16px;background:var(--danger-light);border:1px solid #FECACA;border-radius:8px">
+						<Icon name="alertCircle" size={15} color="var(--danger)" />
+						<span style="font-size:13.5px;color:var(--danger)">Impossible de charger les factures.</span>
+					</div>
+				{:else if invoices.data.length === 0}
+					<div class="card" style="display:flex;flex-direction:column;align-items:center;padding:32px 20px;text-align:center;color:var(--text-muted)">
+						<Icon name="dollar" size={28} color="var(--border-strong)" />
+						<p style="margin-top:10px;font-size:13.5px;font-weight:500">Aucune facture</p>
+					</div>
+				{:else}
+					<div class="card" style="padding:0;overflow:hidden">
+						<table class="mk-table">
+							<thead>
+								<tr><th>N°</th><th>Date</th><th>Statut</th><th style="text-align:right">Montant</th><th></th></tr>
+							</thead>
+							<tbody>
+								{#each invoices.data as inv}
+									<tr>
+										<td style="font-size:13px;font-weight:600;white-space:nowrap">{inv.number}</td>
+										<td style="font-size:13px;color:var(--text-muted);white-space:nowrap">{formatDate(inv.issuedAt)}</td>
+										<td>
+											{#if inv.status === 'Paid'}
+												<Badge variant="success">Payée{inv.paymentMethod ? ` · ${PAYMENT_LABELS[inv.paymentMethod]}` : ''}</Badge>
+											{:else if inv.status === 'Cancelled'}
+												<Badge variant="danger">Annulée</Badge>
+											{:else}
+												<Badge variant="warning">En attente</Badge>
+											{/if}
+										</td>
+										<td style="text-align:right;font-size:13.5px;font-weight:600;white-space:nowrap">{fmt.format(inv.amount)} DA</td>
+										<td style="text-align:right;white-space:nowrap">
+											{#if inv.status === 'Pending'}
+												<button type="button" onclick={() => openPay(inv)}
+													style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--primary);color:white;border:none;border-radius:7px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">
+													<Icon name="wallet" size={13} color="white" /> Encaisser
+												</button>
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</section>
+
+		</main>
+	</div>
+</div>
+
+<!-- Encaissement modal (espèces uniquement) -->
+{#if payInvoice}
+	<div
+		role="presentation"
+		onclick={() => { if (!paySubmitting) payInvoice = null; }}
+		onkeydown={(e) => { if (e.key === 'Escape' && !paySubmitting) payInvoice = null; }}
+		style="position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px"
+	>
+		<div
+			class="card"
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+			style="width:100%;max-width:400px;padding:24px"
+		>
+			<h2 style="font-size:16px;font-weight:700;margin:0 0 4px">Encaisser la facture</h2>
+			<p style="font-size:13px;color:var(--text-muted);margin:0 0 18px">
+				{payInvoice.number} · <strong style="color:var(--text)">{fmt.format(payInvoice.amount)} DA</strong>
+			</p>
+
+			{#if payError}
+				<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--danger-light);border:1px solid #FECACA;border-radius:8px;margin-bottom:14px">
+					<Icon name="alertCircle" size={14} color="var(--danger)" />
+					<span style="font-size:13px;color:var(--danger)">{payError}</span>
+				</div>
+			{/if}
+
+			<div style="font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:6px">Mode de paiement</div>
+			<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:20px">
+				<Icon name="wallet" size={15} color="var(--primary)" />
+				<span style="font-size:13.5px;font-weight:600;color:var(--text)">Espèces</span>
+			</div>
+
+			<div style="display:flex;gap:10px;justify-content:flex-end">
+				<button type="button" disabled={paySubmitting} onclick={() => payInvoice = null}
+					style="padding:9px 18px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13.5px;cursor:pointer">
+					Annuler
+				</button>
+				<button type="button" disabled={paySubmitting} onclick={confirmPayment}
+					style="padding:9px 22px;background:var(--primary);color:white;border:none;border-radius:7px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;opacity:{paySubmitting ? 0.6 : 1}">
+					{paySubmitting ? 'Encaissement…' : 'Confirmer'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<style>
+	.sec-title {
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.6px;
+		margin-bottom: 10px;
+	}
+	.det-label {
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		margin: 12px 0 5px;
+	}
+	.det-text {
+		font-size: 13.5px;
+		line-height: 1.55;
+		color: var(--text);
+		margin: 0 0 4px;
+		white-space: pre-wrap;
+	}
+</style>

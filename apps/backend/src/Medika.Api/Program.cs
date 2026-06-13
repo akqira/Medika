@@ -102,4 +102,32 @@ builder.Services
     });
 
 builder.Services.AddCors(opts =>
-    opts.AddDefaultPolicy(p 
+    opts.AddDefaultPolicy(p => p
+        .WithOrigins(
+            builder.Configuration["Cors:AllowedOrigins"]?.Split(',') ?? ["http://localhost:5173"])
+        .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var ctx = scope.ServiceProvider.GetRequiredService<MongoContext>();
+    await MongoDbInitializer.InitializeAsync(ctx);
+    await MongoDbInitializer.SeedAsync(ctx);
+}
+
+app.UseExceptionHandler();
+app.UseCors();
+app.UseMiddleware<HttpDetailLoggingMiddleware>(); // full HTTP detail → App Insights + Serilog (captures 401s too)
+app.UseMiddleware<ApiKeyMiddleware>(); // X-API-KEY + anti-replay timestamp — BFF-only access (eGestion ADR-008)
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
+
+app.UseFastEndpoints(c =>
+{
+    c.Errors.UseProblemDetails();
+    c.Serializer.Options.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+}).UseSwaggerGen();
+
+app.Run();

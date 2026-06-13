@@ -115,4 +115,31 @@ public class HttpDetailLoggingMiddleware
     private async Task<string> CaptureResponseBodyAsync(HttpContext context, MemoryStream buffer, bool sensitive)
     {
         if (sensitive) return HttpLogRedaction.SuppressedBody;
-        if 
+        if (!_captureBodies) return HttpLogRedaction.BodyCaptureDisabled;
+
+        buffer.Position = 0;
+        if (!IsTextual(context.Response.ContentType))
+            return $"<{context.Response.ContentType ?? "no content-type"}: {buffer.Length} bytes>";
+
+        using var reader = new StreamReader(buffer, Encoding.UTF8, false, 1024, leaveOpen: true);
+        return Truncate(await reader.ReadToEndAsync());
+    }
+
+    private static bool ShouldSkip(PathString path) =>
+        path.StartsWithSegments("/swagger");
+
+    private static bool IsTextual(string? contentType) =>
+        contentType is not null &&
+        (contentType.Contains("json", StringComparison.OrdinalIgnoreCase)
+         || contentType.Contains("text", StringComparison.OrdinalIgnoreCase)
+         || contentType.Contains("xml", StringComparison.OrdinalIgnoreCase)
+         || contentType.Contains("urlencoded", StringComparison.OrdinalIgnoreCase));
+
+    // Secret header values are redacted (ADR-001) — never written to any sink.
+    private static string FormatHeaders(IHeaderDictionary headers) =>
+        string.Join("\n", headers.Select(h =>
+            $"{h.Key}: {HttpLogRedaction.RedactHeaderValue(h.Key, h.Value.ToString())}"));
+
+    private static string Truncate(string value) =>
+        value.Length <= MaxBodyChars ? value : value[..MaxBodyChars] + "…[truncated]";
+}

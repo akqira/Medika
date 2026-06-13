@@ -43,4 +43,19 @@
 		size?: number;
 		color?: string;
 		style?: string;
-	} = $pr
+	} = $props();
+</script>
+
+<svg
+	width={size}
+	height={size}
+	viewBox="0 0 24 24"
+	fill="none"
+	stroke={color}
+	stroke-width="2"
+	stroke-linecap="round"
+	stroke-linejoin="round"
+	style="flex-shrink:0;display:block;{xstyle}"
+>
+	{@html ICONS[name] ?? ''}
+</svg>

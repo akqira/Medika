@@ -313,4 +313,42 @@
 									/>
 									<input
 										value={med.duration}
-										oninput={(e) => updateMed(med.id, 'duration', (e.target as 
+										oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}
+										class="mk-input"
+										placeholder="Durée (7j)"
+									/>
+									<input
+										type="number"
+										min="1"
+										value={med.quantity}
+										oninput={(e) => updateMed(med.id, 'quantity', Number((e.target as HTMLInputElement).value))}
+										class="mk-input"
+										placeholder="Qté"
+										title="Quantité (boîtes)"
+									/>
+								</div>
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+
+			{#if medications.length > 0}
+				<div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;color:var(--text-muted)">
+					<Icon name="printer" size={14} color="var(--text-muted)" />
+					<span style="font-size:12px;line-height:1.4">L'ordonnance s'imprime depuis le dossier patient une fois la consultation enregistrée.</span>
+				</div>
+			{/if}
+		</div>
+
+	</div>
+</form>
+
+<style>
+	/* Constantes vitales : champs courts (5-6 caractères) — pas de gaspillage d'espace */
+	.vital-in {
+		padding: 7px 8px !important;
+		font-size: 13px !important;
+		text-align: center;
+	}
+</style>

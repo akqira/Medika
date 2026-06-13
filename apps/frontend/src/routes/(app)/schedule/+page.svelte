@@ -523,4 +523,25 @@
 									background:{av.bg};color:{av.color};margin-top:1px;
 									display:flex;align-items:center;justify-content:center;
 									font-size:11.5px;font-weight:700">
-									{initials(appt.patie
+									{initials(appt.patientName)}
+								</div>
+								<div style="flex:1;min-width:0">
+									<div style="font-size:13.5px;font-weight:600;color:var(--text)">
+										{appt.patientName}
+									</div>
+									<div style="font-size:12px;color:var(--text-muted);margin-top:2px;
+										overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+										{appt.time} · {appt.reason || appt.type}
+									</div>
+									<div style="margin-top:6px">
+										<Badge status={appt.status}>{STATUS_LABEL[appt.status]}</Badge>
+									</div>
+								</div>
+							</button>
+						{/each}
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</div>
+</div>

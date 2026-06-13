@@ -140,4 +140,18 @@
 							data-sveltekit-preload-data="off"
 							data-sveltekit-reload
 							onclick={() => showUserMenu = false}
-							style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;text
+							style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;text-decoration:none;color:var(--danger);font-size:13.5px;font-weight:500"
+						>
+							<Icon name="logOut" size={15} color="var(--danger)" />
+							Déconnexion
+						</a>
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
+</nav>
+
+<main class="mk-content">
+	{@render children()}
+</main>
