@@ -28,7 +28,18 @@ export default defineConfig({
   testDir: './e2e',
   // Fail fast in CI if someone leaves a .only in a spec.
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // The whole suite runs against ONE shared Vite dev server (no per-test app
+  // isolation). With many parallel workers, a route Vite is still cold-compiling
+  // races the test's first interaction (fill/click) before SvelteKit hydrates,
+  // which surfaces as flaky, run-to-run-different failures. Serialise the workers
+  // so each route compiles + hydrates once before it's driven; keep one retry as
+  // a safety net for any residual timing blip.
+  workers: 1,
+  retries: 1,
+  // Auth round-trips (login → backend → redirect) and SSR loads can be slow on a
+  // cold dev server. Give web-first assertions (toHaveURL, toBeVisible, …) more
+  // room than the 5s default so they wait for the page instead of racing it.
+  expect: { timeout: 15000 },
   // HTML report + concise console list, so every run is visualisable after the fact.
   reporter: [['html', { open: 'never' }], ['list']],
   use: {

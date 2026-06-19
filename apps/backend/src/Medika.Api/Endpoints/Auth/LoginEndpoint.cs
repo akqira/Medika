@@ -1,6 +1,7 @@
 using FastEndpoints;
 using FluentValidation;
 using Medika.Application.Identity.Commands.Login;
+using Microsoft.Extensions.Hosting;
 
 namespace Medika.Api.Endpoints.Auth;
 
@@ -21,7 +22,10 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
     {
         Post("/api/auth/login");
         AllowAnonymous();
-        Throttle(hitLimit: 5, durationSeconds: 60);
+        // Brute-force / enumeration protection in real environments. Skipped in
+        // Development so the parallel E2E suite (many logins/min) isn't throttled.
+        if (!Resolve<IHostEnvironment>().IsDevelopment())
+            Throttle(hitLimit: 5, durationSeconds: 60);
         Summary(s => s.Summary = "Authenticate and receive a JWT token");
     }
 
