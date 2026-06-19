@@ -33,6 +33,7 @@ apps/backend/src/Medika.Api/logs/
 
 # Claude Code — local overrides contain secrets (MCP tokens, etc.)
 .claude/settings.local.json
+**/.claude/settings.local.json
 .claude/worktrees/
 
 # VSCode — personal editor preferences, not project config

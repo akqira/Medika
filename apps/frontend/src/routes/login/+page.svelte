@@ -16,8 +16,8 @@
 	];
 
 	const STATS = [
-		{ value: '2 000+', label: 'Médecins' },
 		{ value: '48', label: 'Wilayas' },
+		{ value: '100%', label: 'Algérienne' },
 		{ value: '99.9%', label: 'Disponibilité' },
 	];
  
@@ -151,7 +151,7 @@
 						</div>
 						<div style="position:relative">
 							<div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none">
-								<Icon name={showPassword ? 'eyeOff' : 'eye'} size={15} color="#9CA3AF" />
+								<Icon name="lock" size={15} color="#9CA3AF" />
 							</div>
 							<input
 								id="password"

@@ -54,6 +54,12 @@
 			">
 				<Icon name={item.icon} size={15} color={active ? 'white' : 'rgba(255,255,255,0.6)'} />
 				{item.label}
+				{#if item.href === '/patients' && data.totalPatients > 0}
+					<span style="
+						margin-left:2px;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;
+						background:rgba(94,231,208,0.18);color:#5EE7D0;line-height:1.5;
+					">{data.totalPatients}</span>
+				{/if}
 			</a>
 		{/each}
 	</div>

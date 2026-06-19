@@ -107,30 +107,41 @@
 		return d.toISOString().split('T')[0];
 	});
 
+	const todayIso = new Date().toISOString().split('T')[0];
+	const isToday = $derived(data.date === todayIso);
+
 	const dateLabel = $derived(
 		new Date(data.date + 'T00:00:00').toLocaleDateString('fr-FR', {
 			day: '2-digit', month: '2-digit', year: 'numeric'
 		})
 	);
 
-	// Timeline: 08:00–18:00, 52px per 30-min slot
-	const SLOT_H = 52;
+	// Timeline: 08:00–20:00 (12h), fitted to the visible height so the whole day
+	// shows at once without scrolling (falls back to scroll on very short screens).
 	const START_MIN = 8 * 60;
-	const END_MIN   = 18 * 60;
-	const TOTAL_SLOTS = (END_MIN - START_MIN) / 30;
+	const END_MIN   = 20 * 60;
+	const TOTAL_SLOTS = (END_MIN - START_MIN) / 30; // 24 demi-heures
+	const TOP_PAD = 14;
+	const MIN_SLOT_H = 26;
 
-	const timeLines = Array.from({ length: TOTAL_SLOTS + 1 }, (_, i) => {
-		const total = START_MIN + i * 30;
-		const h = Math.floor(total / 60);
-		const m = total % 60;
-		return { top: i * SLOT_H, isHour: m === 0, label: m === 0 ? `${String(h).padStart(2, '0')}:00` : '' };
-	});
+	let timelineH = $state(0); // measured height of the timeline viewport
+	const SLOT_H = $derived(Math.max(MIN_SLOT_H, (timelineH - TOP_PAD - 8) / TOTAL_SLOTS));
+	const innerH = $derived(TOP_PAD + TOTAL_SLOTS * SLOT_H + 8);
+
+	const timeLines = $derived(
+		Array.from({ length: TOTAL_SLOTS + 1 }, (_, i) => {
+			const total = START_MIN + i * 30;
+			const h = Math.floor(total / 60);
+			const m = total % 60;
+			return { top: TOP_PAD + i * SLOT_H, isHour: m === 0, label: m === 0 ? `${String(h).padStart(2, '0')}:00` : '' };
+		})
+	);
 
 	function apptPos(appt: AppointmentSlot) {
 		const [h, m] = appt.time.split(':').map(Number);
 		const startMin = Math.max(START_MIN, Math.min(END_MIN - 30, h * 60 + m));
-		const top    = ((startMin - START_MIN) / 30) * SLOT_H;
-		const height = Math.max((appt.durationMinutes / 30) * SLOT_H - 4, 40);
+		const top    = TOP_PAD + ((startMin - START_MIN) / 30) * SLOT_H;
+		const height = Math.max((appt.durationMinutes / 30) * SLOT_H - 3, 22);
 		return { top, height };
 	}
 
@@ -214,6 +225,17 @@
 				<Icon name="chevronRight" size={13} />
 			</a>
 
+			<a href="/schedule?date={todayIso}"
+				aria-disabled={isToday}
+				style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:6px;text-decoration:none;flex-shrink:0;font-size:12.5px;font-weight:600;
+					background:{isToday ? 'var(--bg)' : 'var(--primary-50)'};
+					border:1px solid {isToday ? 'var(--border)' : 'var(--primary-light)'};
+					color:{isToday ? 'var(--text-muted)' : 'var(--primary)'};
+					pointer-events:{isToday ? 'none' : 'auto'};">
+				<Icon name="calendar" size={13} color={isToday ? 'var(--text-muted)' : 'var(--primary)'} />
+				Aujourd'hui
+			</a>
+
 			<span style="font-size:13.5px;color:var(--text-muted);font-weight:400">{weekLabel}</span>
 
 			<div style="flex:1"></div>
@@ -261,8 +283,8 @@
 	<div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border)">
 
 		<!-- Timeline -->
-		<div style="flex:1;overflow-y:auto;background:var(--surface)">
-			<div style="position:relative;padding-left:64px;height:{TOTAL_SLOTS * SLOT_H + 32}px">
+		<div bind:clientHeight={timelineH} style="flex:1;overflow-y:auto;background:var(--surface)">
+			<div style="position:relative;padding-left:64px;height:{innerH}px">
 
 				{#each timeLines as tl}
 					{#if tl.label}
@@ -301,7 +323,7 @@
 								overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 								{appt.patientName}
 							</div>
-							{#if pos.height > 42}
+							{#if pos.height > 34}
 								<div style="font-size:12px;color:var(--text-muted);margin-top:1px;
 									overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 									{appt.reason || appt.type}
@@ -518,19 +540,6 @@
 							</button>
 						{/each}
 					{/if}
-				</div>
-
-				<div style="padding:14px 20px;border-top:1px solid var(--border)">
-					<button
-						type="button"
-						onclick={() => showBookingModal = true}
-						style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
-							padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;
-							font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer"
-					>
-						<Icon name="plus" size={14} color="white" />
-						Nouveau rendez-vous
-					</button>
 				</div>
 			{/if}
 		</div>
