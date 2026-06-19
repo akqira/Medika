@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/sveltekit";
+import type { HandleClientError } from "@sveltejs/kit";
 // Dynamic (not static) public env: tolerates missing vars at build time, so CI and
 // Vercel builds don't fail when the DSN isn't set. Empty DSN just disables Sentry.
 import { env } from "$env/dynamic/public";
@@ -10,7 +11,7 @@ Sentry.init({
   sendDefaultPii: true,
 });
 
-const myErrorHandler = ({ error, event }) => {
+const myErrorHandler: HandleClientError = ({ error, event }) => {
   console.error("An error occurred on the client side:", error, event);
 };
 export const handleError = Sentry.handleErrorWithSentry(myErrorHandler);
