@@ -16,12 +16,21 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 		monthlyTrend: [], breakdownByType: []
 	};
 
+	// The charges endpoint wraps the rows in a result object
+	// ({ year, month, totalAmount, items }) and names the id `chargeId` — map it
+	// down to the flat Charge[] the page expects.
+	type ChargeItem = Omit<Charge, 'id'> & { chargeId: string };
+	type ChargesResult = { items: ChargeItem[] };
+
 	const [summary, charges] = await Promise.all([
 		api
 			.get<FinancialSummary>(`/api/finance/summary?year=${year}&month=${month}`, token)
 			.catch(() => empty),
 		api
-			.get<Charge[]>(`/api/charges?year=${year}&month=${month}`, token)
+			.get<ChargesResult>(`/api/charges?year=${year}&month=${month}`, token)
+			.then(({ items }) =>
+				items.map(({ chargeId, ...rest }): Charge => ({ id: chargeId, ...rest }))
+			)
 			.catch(() => [] as Charge[]),
 	]);
 
