@@ -2,7 +2,7 @@
 
 **Vision :** L'outil le plus simple pour gérer un cabinet médical en Algérie — un médecin gère sa journée, ses patients, ses ordonnances et son argent, sans formation.
 
-> Mise à jour du **21 juin 2026** : Phases 0 à 3 terminées et vérifiées (e2e au vert, déployées sur `dev`). Passage à la **Phase 4 — Finances**.
+> Mise à jour du **21 juin 2026** : **Phases 0 à 4 terminées et vérifiées** (unit .NET + e2e au vert en CI, déployées sur `dev`).
 > Issue de la revue terrain de Kader (`docs/Kaki/MyRemarks.md`).
 > Les décisions encore ouvertes sont listées dans `docs/Kaki/Feedback-Analyse.md`.
 
@@ -14,9 +14,13 @@
 
 L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés** : authentification, création de médecin, dashboard, agenda, liste/fiche patient, consultation, facturation espèces, autocomplétion des médicaments (nomenclature algérienne), suite E2E Playwright **au vert**, et le pack légal. **La Phase 0 (pré-lancement) est terminée** — l'app est crédible pour les premiers médecins amis.
 
-**Phases 1 à 3 : terminées et vérifiées** (dossier patient complet, agenda, ergonomie consultation/ordonnance). Tout est vérifié en exécution, couvert par la suite e2e (lancée en CI sur chaque PR) et déployé sur `dev`. Gaps ciblés corrigés au passage : bug d'unicité NSS, champ posologie (texte libre + raccourci 1-0-1-0), mot de passe oublié, rate-limit auth par IP. **Reste ouvert (non bloquant) : validation visuelle du design par Kader.**
+**Phases 1 à 4 : terminées et vérifiées** — dossier patient, agenda, ergonomie consultation/ordonnance, et finances (recettes + dépenses, P&L mensuel, catalogue d'actes + sélecteur dans la consultation, répartition des recettes par acte). Tout est vérifié en exécution, couvert par la CI (e2e Playwright + tests unitaires .NET sur le push `dev`) et déployé sur `dev`. Gaps ciblés corrigés au passage : unicité NSS, posologie (texte libre + raccourci 1-0-1-0), mot de passe oublié, rate-limit auth par IP, bug catégorie de dépense (FR/enum), endpoints de suppression patient/dépense/acte.
 
-**Prochaine étape : Phase 4 — Finances.** Démarrage bloqué tant que les 4 questions de cadrage (section ci-dessous) ne sont pas tranchées avec Kader.
+**Reste ouvert (non bloquant) :**
+- ▢ Validation visuelle du dossier patient par Kader (réf. `design-medical.pdf`).
+- ⏸️ Export comptable PDF/Excel (Phase 4 — reporté, décision Kader).
+- ▢ Outillage : brancher les tests unitaires **vitest** (front) en CI — ils ne tournent qu'en local pour l'instant.
+- ▢ Mise en production (`dev` → `main`) quand Kader valide.
 
 ---
 
