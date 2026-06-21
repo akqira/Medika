@@ -1,0 +1,109 @@
+name: E2E
+
+# Runs the Playwright suite against a real, throwaway stack: a fresh MongoDB
+# service container, the .NET API (seeds the doctor on startup), and the Vite
+# dev server. Enforces the project rule that merged features ship passing e2e.
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'apps/backend/**'
+      - 'apps/frontend/**'
+      - '.github/workflows/e2e.yml'
+  push:
+    branches: [dev]
+    paths:
+      - 'apps/backend/**'
+      - 'apps/frontend/**'
+      - '.github/workflows/e2e.yml'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Ephemeral CI-only secrets. Backend ApiKey MUST equal frontend API_SECRET.
+      ApiSettings__ApiKey: ci-e2e-api-key
+      Jwt__Secret: ci-e2e-jwt-secret-must-be-at-least-32-bytes-long-0123456789
+      MongoDB__ConnectionString: mongodb://localhost:27017
+      MongoDB__DatabaseName: medika_e2e
+      ASPNETCORE_ENVIRONMENT: Development
+      # Frontend BFF → backend (plain HTTP; the API has no HTTPS redirection)
+      API_URL: http://localhost:8000
+      API_SECRET: ci-e2e-api-key
+      # Playwright
+      E2E_BASE_URL: http://localhost:5000
+      E2E_EMAIL: kader.kebir@gmail.com
+      E2E_PASSWORD: Doctor@123
+      CI: 'true'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install frontend deps
+        run: pnpm --filter frontend install
+
+      - name: Install Playwright browser
+        run: pnpm --filter frontend exec playwright install --with-deps chromium
+
+      - name: Start backend (http://localhost:8000)
+        run: |
+          nohup dotnet run --project apps/backend/src/Medika.Api/Medika.Api.csproj \
+            --no-launch-profile --urls http://localhost:8000 > backend.log 2>&1 &
+          echo "Waiting for the API to accept requests..."
+          for i in $(seq 1 90); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/patients || echo 000)
+            # Any HTTP status (even 401 from the API-key middleware) means it's up.
+            if [ "$code" != "000" ]; then echo "API up (HTTP $code)"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::API did not start"; cat backend.log; exit 1
+
+      - name: Start frontend (http://localhost:5000)
+        run: |
+          nohup pnpm --filter frontend dev > frontend.log 2>&1 &
+          echo "Waiting for the Vite dev server..."
+          for i in $(seq 1 90); do
+            if curl -sf -o /dev/null http://localhost:5000/login; then echo "Frontend up"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::Frontend did not start"; cat frontend.log; exit 1
+
+      - name: Run Playwright e2e
+        run: pnpm --filter frontend exec playwright test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/frontend/playwright-report
+          retention-days: 7
+
+      - name: Dump server logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "===== backend.log ====="; tail -n 200 backend.log || true
+          echo "===== frontend.log ====="; tail -n 200 frontend.log || true

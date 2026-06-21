@@ -225,7 +225,7 @@ Utility classes: `.card`, `.mk-nav`, `.mk-content`, `.mk-input`, `.mk-tab`, `.mk
 1. **Update `ROADMAP.md`** — move the shipped items to their new status (✅ / 🟡 / ⬜ / ⏸️) and note anything the merge changed. The roadmap must never lag behind what's on `dev`.
 2. **Have passing E2E coverage** — every merged feature/bugfix must have a Playwright spec in `apps/frontend/e2e/` that exercises it (failing-path first, per the existing convention) and the suite must pass. If a PR ships behaviour with no e2e spec, add one in the same PR (or an immediate follow-up before the next merge).
 
-A local `gh pr merge` triggers a reminder via the `PostToolUse` hook in `.claude/settings.json`, but the rule applies to **all** merges (including those done from the GitHub web UI).
+A local `gh pr merge` triggers a reminder via the `PostToolUse` hook in `.claude/settings.json`, but the rule applies to **all** merges (including those done from the GitHub web UI). The Playwright suite runs in CI on every PR/push touching `apps/**` via `.github/workflows/e2e.yml` (fresh Mongo + API + Vite), so "passing e2e" is enforced automatically.
 
 ## Known gotchas
 
