@@ -104,7 +104,7 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 ---
 
-## Phase 4 · Finances 🟡 EN COURS
+## Phase 4 · Finances ✅ TERMINÉE (export comptable reporté)
 > Cadrage tranché avec Kader : **recettes + dépenses**, **P&L mensuel (net)**, honoraires via **catalogue d'actes + tarifs**, export comptable **plus tard**.
 
 **Déjà en place (audit) :** dépenses (`Charge` : catégorie, montant, date) avec création/liste + page Finances ; factures (recettes, total payé par période) ; **P&L mensuel déjà calculé** (`GetFinancialSummaryHandler` : `NetIncome = recettes − dépenses`, tendance 6 mois, impayés) affiché sur le dashboard et la page Finances.
@@ -114,7 +114,7 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 - ✅ **Catalogue d'actes + tarifs** :
   - ✅ Entité `Act` par cabinet (nom + tarif) + repo/index + endpoints **POST/GET/DELETE `/api/acts`** (scopés cabinet) ; écran de gestion `(app)/actes` (ajout/liste/suppression), accessible depuis Finances. Tests : **unit .NET** (`Medika.Tests/Finance` — domaine + handlers Add/Delete, 9 tests) + **e2e** (`actes.spec.ts`).
   - ✅ **Sélecteur d'acte dans la consultation** : un menu « Acte » (depuis le catalogue) pré-remplit les honoraires à la sélection, montant restant modifiable (« Acte libre » par défaut). e2e dans `consultation.spec.ts`.
-- ⬜ **Répartition des recettes par acte** : `breakdownByType` est codé en dur (« Consultations » 100 %) — le rendre réel une fois les actes typés.
+- ✅ **Répartition des recettes par acte** : la facture porte l'acte facturé (`Invoice.ActName`, depuis le sélecteur de consultation) ; `breakdownByType` agrège désormais les factures **payées** par acte (libellé, montant, %), tri décroissant, « Autres » pour les actes libres. Tests : **unit .NET** (`Invoice` + `GetFinancialSummaryHandler`) ; logique d'agrégation couverte en unitaire (un e2e exigerait une finalisation de consultation irréversible).
 - ⏸️ Export PDF/Excel comptable — reporté (décision Kader).
 
 ---

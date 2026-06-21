@@ -12,6 +12,7 @@ public record SaveConsultationCommand(
     VitalSignsDto? VitalSigns,
     List<PrescriptionLineDto> Prescription,
     decimal Tariff,
+    string? ActName = null,
     bool Finalize = false) : ICommand<string>;
 
 public record VitalSignsDto(

@@ -33,10 +33,17 @@ public class GetFinancialSummaryHandler(
             trend.Add(new MonthlyRevenue(m.ToString("MMM"), mIncome));
         }
 
-        var breakdown = new List<RevenueBreakdown>
-        {
-            new("Consultations", income, 100)  // refined per act type in next iteration
-        };
+        // Revenue breakdown by billed act (paid invoices only), largest first.
+        var paid = monthInvoices.Where(i => i.Status == InvoiceStatus.Paid).ToList();
+        var breakdown = paid
+            .GroupBy(i => string.IsNullOrWhiteSpace(i.ActName) ? "Autres" : i.ActName!)
+            .Select(g =>
+            {
+                var amount = g.Sum(i => i.Amount);
+                return new RevenueBreakdown(g.Key, amount, income > 0 ? (int)Math.Round(amount / income * 100) : 0);
+            })
+            .OrderByDescending(b => b.Amount)
+            .ToList();
 
         return new FinancialSummary(
             income, chargesTotal, income - chargesTotal,

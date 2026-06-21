@@ -92,7 +92,7 @@ public class SaveConsultationHandler(
             var invoice = Invoice.CreateFromConsultation(
                 cabinetId,
                 cmd.PatientId, consultation.Id.ToString(),
-                currentUser.UserId, cmd.Tariff, invoiceNumber);
+                currentUser.UserId, cmd.Tariff, invoiceNumber, cmd.ActName);
             await invoices.AddAsync(invoice, ct);
 
             var patient = await patients.GetByIdAsync(PatientId.From(cmd.PatientId), ct);
