@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddSingleton(jwtSettings);
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<IPasswordResetSender, LoggingPasswordResetSender>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
     }

@@ -145,7 +145,7 @@
 							<label for="password" style="font-size:13px;font-weight:500;color:#1A1D23">
 								Mot de passe
 							</label>
-							<a href="#" style="font-size:12.5px;color:#0F766E;text-decoration:none;font-weight:500">
+							<a href="/forgot-password" style="font-size:12.5px;color:#0F766E;text-decoration:none;font-weight:500">
 								Mot de passe oublié ?
 							</a>
 						</div>
