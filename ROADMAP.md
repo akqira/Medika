@@ -99,7 +99,8 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 - **Ordonnance** :
   - ✅ **Liste de médicaments** auto-complétée sur la nomenclature (`/medicaments.json`) + ajout libre (« … sera utilisé tel quel »).
   - ✅ **Posologie** : champ **texte libre visible** sur la ligne d'ordonnance (placeholder « 1 cp matin et soir »), affiché à côté du nom du médicament dans le dossier/PDF. Le champ `dosage` n'est plus caché. Couvert par un test e2e (`consultation.spec.ts`).
-  - ✅ Champ ambigu **« Prise » / « Fréquence » retiré** (« laisse tomber, c'est ambigus » — feedback Kader). Le format structuré **« 1-0-1 »** est **reporté** (décision : texte libre pour l'instant) — à réévaluer plus tard avec un médecin.
+  - ✅ Champ ambigu **« Prise » / « Fréquence » retiré** (« laisse tomber, c'est ambigus » — feedback Kader).
+  - ✅ **Raccourci posologie « 1-0-1-0 »** : en plus du texte libre, taper un motif `matin-midi-soir-coucher` (3 ou 4 segments) affiche un aperçu en direct (« = 1 matin, 2 soir, 1 coucher ») et se normalise au blur. Le texte libre reste prioritaire (un motif non reconnu n'est pas modifié). Logique pure dans `src/lib/posology.ts` (test unitaire vitest) + e2e dans `consultation.spec.ts`.
 
 ---
 
