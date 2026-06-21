@@ -2,7 +2,7 @@
 
 **Vision :** L'outil le plus simple pour gérer un cabinet médical en Algérie — un médecin gère sa journée, ses patients, ses ordonnances et son argent, sans formation.
 
-> Mise à jour du **21 juin 2026** : Phase 0 terminée et vérifiée, passage à la Phase 1.
+> Mise à jour du **21 juin 2026** : Phases 0 à 3 terminées et vérifiées (e2e au vert, déployées sur `dev`). Passage à la **Phase 4 — Finances**.
 > Issue de la revue terrain de Kader (`docs/Kaki/MyRemarks.md`).
 > Les décisions encore ouvertes sont listées dans `docs/Kaki/Feedback-Analyse.md`.
 
@@ -14,9 +14,9 @@
 
 L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés** : authentification, création de médecin, dashboard, agenda, liste/fiche patient, consultation, facturation espèces, autocomplétion des médicaments (nomenclature algérienne), suite E2E Playwright **au vert**, et le pack légal. **La Phase 0 (pré-lancement) est terminée** — l'app est crédible pour les premiers médecins amis.
 
-**Constat important (audit code juin 2026) :** le code des Phases 1 à 3 est en grande partie **déjà implémenté** (le dossier patient est complet de bout en bout). Le travail restant n'est donc pas de *construire* mais de **vérifier en exécution**, **valider le design avec Kader**, et **corriger quelques gaps ciblés** (voir chaque phase).
+**Phases 1 à 3 : terminées et vérifiées** (dossier patient complet, agenda, ergonomie consultation/ordonnance). Tout est vérifié en exécution, couvert par la suite e2e (lancée en CI sur chaque PR) et déployé sur `dev`. Gaps ciblés corrigés au passage : bug d'unicité NSS, champ posologie (texte libre + raccourci 1-0-1-0), mot de passe oublié, rate-limit auth par IP. **Reste ouvert (non bloquant) : validation visuelle du design par Kader.**
 
-**Prochaine étape :** vérifier le dossier patient (Phase 1) sur l'app en exécution + valider le design, puis corriger le champ dosage caché (Phase 3).
+**Prochaine étape : Phase 4 — Finances.** Démarrage bloqué tant que les 4 questions de cadrage (section ci-dessous) ne sont pas tranchées avec Kader.
 
 ---
 
@@ -52,7 +52,7 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 ---
 
-## Phase 1 · Refonte Fiche Patient ✅ CODE COMPLET — à vérifier / valider design
+## Phase 1 · Refonte Fiche Patient ✅ TERMINÉE (validation design Kader en attente)
 > La remarque la plus structurante. La fiche a été refondue en dossier 2 colonnes (identité à gauche, clinique à droite).
 > Réf. design : `docs/Kaki/images/design-medical.pdf` + `medical-record.webp`.
 > _Audité sur le code : tout est implémenté de bout en bout (route front + handler back). Reste : **vérification fonctionnelle en exécution** et **validation visuelle par Kader** contre la réf. design._
@@ -90,7 +90,7 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 ---
 
-## Phase 3 · Consultation & Ordonnance — ergonomie de saisie ✅ (format 1-0-1 reporté)
+## Phase 3 · Consultation & Ordonnance — ergonomie de saisie ✅ TERMINÉE
 > Principe directeur : le médecin écrit **vite**, peu de clics, peu d'allers-retours clavier/souris.
 
 - ✅ **Dropdown patient** : se compacte en barre fine (avatar + nom + « Changer ») une fois le patient sélectionné.
@@ -104,10 +104,16 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 ---
 
-## Phase 4 · Finances (à cadrer) ⏸️ BLOQUÉE
-> Rien n'a encore été proposé côté produit. Périmètre à définir avec Kader (questions dans le doc feedback).
+## Phase 4 · Finances 🟡 EN COURS
+> Cadrage tranché avec Kader : **recettes + dépenses**, **P&L mensuel (net)**, honoraires via **catalogue d'actes + tarifs**, export comptable **plus tard**.
 
-Pistes (à confirmer) : total du jour / du mois, recettes par période, suivi de dépenses par catégorie, P&L mensuel simple.
+**Déjà en place (audit) :** dépenses (`Charge` : catégorie, montant, date) avec création/liste + page Finances ; factures (recettes, total payé par période) ; **P&L mensuel déjà calculé** (`GetFinancialSummaryHandler` : `NetIncome = recettes − dépenses`, tendance 6 mois, impayés) affiché sur le dashboard et la page Finances.
+
+**À faire :**
+- ✅ **Bug dépenses corrigé** : la page Finances envoyait des catégories en français (« Loyer »…) alors que l'enum backend attend l'anglais (`Rent`…) → `Enum.Parse` échouait, l'ajout plantait. La page envoie désormais la valeur d'enum (libellés FR affichés). Endpoint **DELETE `/api/charges/{id}`** ajouté (scopé cabinet) + proxy ; e2e happy-path (création → affichage → suppression) qui aurait détecté le bug.
+- ⬜ **Catalogue d'actes + tarifs** (n'existe pas) : entité `Act` par cabinet (nom + tarif), CRUD + écran de gestion, puis sélecteur d'acte dans la consultation qui pré-remplit les honoraires (montant restant modifiable). **Prochaine étape.**
+- ⬜ **Répartition des recettes par acte** : `breakdownByType` est codé en dur (« Consultations » 100 %) — le rendre réel une fois les actes typés.
+- ⏸️ Export PDF/Excel comptable — reporté (décision Kader).
 
 ---
 

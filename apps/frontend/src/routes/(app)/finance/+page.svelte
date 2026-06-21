@@ -31,21 +31,20 @@
 	let submitting     = $state(false);
 	const today = new Date().toISOString().split('T')[0];
 
+	// value = backend ChargeCategory enum member (sent to the API); label = French UI text.
+	// (Previously the French labels were sent raw and Enum.Parse rejected most of them.)
 	const CHARGE_CATEGORIES = [
-		'Loyer', 'Internet', 'Téléphone', 'Assurance',
-		'Matériel', 'Maintenance', 'Comptabilité', 'Autre',
+		{ value: 'Rent',        label: 'Loyer',        icon: 'mapPin' },
+		{ value: 'Internet',    label: 'Internet',     icon: 'activity' },
+		{ value: 'Phone',       label: 'Téléphone',    icon: 'phone' },
+		{ value: 'Insurance',   label: 'Assurance',    icon: 'shieldCheck' },
+		{ value: 'Equipment',   label: 'Matériel',     icon: 'clipboard' },
+		{ value: 'Maintenance', label: 'Maintenance',  icon: 'settings' },
+		{ value: 'Accounting',  label: 'Comptabilité', icon: 'fileText' },
+		{ value: 'Other',       label: 'Autre',        icon: 'dollar' },
 	];
-
-	const CATEGORY_ICONS: Record<string, string> = {
-		Loyer:         'mapPin',
-		Internet:      'activity',
-		Téléphone:     'phone',
-		Assurance:     'shieldCheck',
-		Matériel:      'clipboard',
-		Maintenance:   'settings',
-		Comptabilité:  'fileText',
-		Autre:         'dollar',
-	};
+	const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(CHARGE_CATEGORIES.map((c) => [c.value, c.label]));
+	const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CHARGE_CATEGORIES.map((c) => [c.value, c.icon]));
 
 	function formatChargeDate(iso: string) {
 		return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -130,7 +129,7 @@
 						<select id="charge-category" name="category" required class="mk-input">
 							<option value="">— Choisir —</option>
 							{#each CHARGE_CATEGORIES as cat}
-								<option value={cat}>{cat}</option>
+								<option value={cat.value}>{cat.label}</option>
 							{/each}
 						</select>
 					</div>
@@ -269,14 +268,14 @@
 				</thead>
 				<tbody>
 					{#each data.charges as charge}
-						<tr>
+						<tr data-charge-id={charge.id}>
 							<td style="font-size:13px;color:var(--text-muted);white-space:nowrap">{formatChargeDate(charge.date)}</td>
 							<td>
 								<div style="display:flex;align-items:center;gap:7px">
 									<div style="width:26px;height:26px;border-radius:6px;background:var(--danger-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-										<Icon name={CATEGORY_ICONS[charge.category] ?? 'dollar'} size={13} color="var(--danger)" />
+										<Icon name={CATEGORY_ICON[charge.category] ?? 'dollar'} size={13} color="var(--danger)" />
 									</div>
-									<span style="font-size:13px;font-weight:500">{charge.category}</span>
+									<span style="font-size:13px;font-weight:500">{CATEGORY_LABEL[charge.category] ?? charge.category}</span>
 								</div>
 							</td>
 							<td style="font-size:13.5px;color:var(--text)">{charge.description}</td>
