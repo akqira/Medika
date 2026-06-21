@@ -47,6 +47,7 @@
 
 	// Act catalogue: picking an act pre-fills the honoraires (still overridable).
 	let selectedActId = $state('');
+	const selectedActName = $derived(data.acts.find((a) => a.id === selectedActId)?.name ?? '');
 	function applyAct() {
 		const act = data.acts.find((a) => a.id === selectedActId);
 		if (act) fee = String(act.tariff);
@@ -123,6 +124,7 @@
 	<input type="hidden" name="finalize" value={finalizeValue} />
 	<input type="hidden" name="appointmentId" value={appointmentId} />
 	<input type="hidden" name="prescription" value={prescriptionJson} />
+	<input type="hidden" name="actName" value={selectedActName} />
 
 	<div style="height:calc(100vh - 58px);overflow-y:auto;background:var(--bg)">
 

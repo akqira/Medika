@@ -36,6 +36,7 @@ export const actions: Actions = {
 		const diagnosis     = data.get('diagnosis')?.toString() ?? '';
 		const notes         = data.get('notes')?.toString() ?? '';
 		const tariff        = Number(data.get('tariff') ?? 0);
+		const actName       = data.get('actName')?.toString() || undefined;
 		const finalize      = data.get('finalize') === 'true';
 
 		const prescriptionRaw = data.get('prescription')?.toString() ?? '[]';
@@ -71,6 +72,7 @@ export const actions: Actions = {
 				vitalSigns,
 				prescription,
 				tariff,
+				actName,
 				finalize,
 			}, token);
 		} catch (e: unknown) {
