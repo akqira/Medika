@@ -111,7 +111,9 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 **À faire :**
 - ✅ **Bug dépenses corrigé** : la page Finances envoyait des catégories en français (« Loyer »…) alors que l'enum backend attend l'anglais (`Rent`…) → `Enum.Parse` échouait, l'ajout plantait. La page envoie désormais la valeur d'enum (libellés FR affichés). Endpoint **DELETE `/api/charges/{id}`** ajouté (scopé cabinet) + proxy ; e2e happy-path (création → affichage → suppression) qui aurait détecté le bug.
-- ⬜ **Catalogue d'actes + tarifs** (n'existe pas) : entité `Act` par cabinet (nom + tarif), CRUD + écran de gestion, puis sélecteur d'acte dans la consultation qui pré-remplit les honoraires (montant restant modifiable). **Prochaine étape.**
+- 🟡 **Catalogue d'actes + tarifs** :
+  - ✅ Entité `Act` par cabinet (nom + tarif) + repo/index + endpoints **POST/GET/DELETE `/api/acts`** (scopés cabinet) ; écran de gestion `(app)/actes` (ajout/liste/suppression), accessible depuis Finances. Tests : **unit .NET** (`Medika.Tests/Finance` — domaine + handlers Add/Delete, 9 tests) + **e2e** (`actes.spec.ts`).
+  - ⬜ **Sélecteur d'acte dans la consultation** qui pré-remplit les honoraires (montant restant modifiable). **Prochaine étape.**
 - ⬜ **Répartition des recettes par acte** : `breakdownByType` est codé en dur (« Consultations » 100 %) — le rendre réel une fois les actes typés.
 - ⏸️ Export PDF/Excel comptable — reporté (décision Kader).
 

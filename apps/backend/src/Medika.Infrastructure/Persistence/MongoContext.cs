@@ -22,6 +22,7 @@ public class MongoContext
     public IMongoCollection<Consultation> Consultations => _db.GetCollection<Consultation>("consultations");
     public IMongoCollection<Invoice> Invoices => _db.GetCollection<Invoice>("invoices");
     public IMongoCollection<Charge> Charges => _db.GetCollection<Charge>("charges");
+    public IMongoCollection<Act> Acts => _db.GetCollection<Act>("acts");
     public IMongoCollection<User> Users => _db.GetCollection<User>("users");
     public IMongoCollection<AuditLog> AuditLogs => _db.GetCollection<AuditLog>("audit_logs");
 }

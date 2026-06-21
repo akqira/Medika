@@ -13,6 +13,14 @@ public sealed class FakeCurrentUserService : ICurrentUserService
     public bool IsAuthenticated { get; init; } = true;
 }
 
+/// <summary>No-op <see cref="IAuditService"/> for handler unit tests.</summary>
+public sealed class FakeAuditService : IAuditService
+{
+    public Task LogAsync(string action, string entityType, string? entityId = null,
+        object? before = null, object? after = null, CancellationToken ct = default)
+        => Task.CompletedTask;
+}
+
 /// <summary>
 /// Fake consultation repository — only the paged-by-patient query is exercised by the
 /// ADR-002 tests; the rest throw so an accidental call surfaces loudly.

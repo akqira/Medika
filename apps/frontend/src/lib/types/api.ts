@@ -136,3 +136,9 @@ export interface Charge {
 	amount: number;
 	date: string;
 }
+
+export interface Act {
+	id: string;
+	name: string;
+	tariff: number;
+}
