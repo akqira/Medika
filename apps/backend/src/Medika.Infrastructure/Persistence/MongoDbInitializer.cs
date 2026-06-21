@@ -50,7 +50,12 @@ public static class MongoDbInitializer
         var col = ctx.Patients;
         var builders = Builders<Patient>.IndexKeys;
 
-        // Ensure the nss index is sparse — drop the old non-sparse version if it exists
+        // NSS uniqueness is scoped PER CABINET (multi-tenancy doctrine) and only enforced
+        // when an NSS is actually provided. A plain or *sparse* unique index is not enough:
+        // sparse skips only MISSING fields, not explicit nulls, and the Patient document
+        // serializes Nss as an explicit null — so two patients without an NSS collide
+        // (E11000 dup key { nss: null }). Use a PARTIAL filter on nss being a string so the
+        // constraint applies only to real NSS values. Drop legacy single-field nss indexes.
         try { await col.Indexes.DropOneAsync("nss_1"); } catch { }
 
         await col.Indexes.CreateManyAsync([
@@ -63,8 +68,14 @@ public static class MongoDbInitializer
                 builders.Ascending(p => p.LastName),
                 builders.Ascending(p => p.FirstName))),
             new CreateIndexModel<Patient>(
-                builders.Ascending(p => p.Nss),
-                new CreateIndexOptions { Unique = true, Sparse = true }),
+                builders.Combine(
+                    builders.Ascending(p => p.CabinetId),
+                    builders.Ascending(p => p.Nss)),
+                new CreateIndexOptions<Patient>
+                {
+                    Unique = true,
+                    PartialFilterExpression = new BsonDocument("nss", new BsonDocument("$type", "string"))
+                }),
         ]);
     }
 

@@ -14,9 +14,9 @@
 
 L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés** : authentification, création de médecin, dashboard, agenda, liste/fiche patient, consultation, facturation espèces, autocomplétion des médicaments (nomenclature algérienne), suite E2E Playwright **au vert**, et le pack légal. **La Phase 0 (pré-lancement) est terminée** — l'app est crédible pour les premiers médecins amis.
 
-Le frein restant n'est pas le nombre de features mais la **finition** : design de la fiche patient (Phase 1), fluidité de l'agenda (Phase 2), ergonomie de saisie (Phase 3).
+**Constat important (audit code juin 2026) :** le code des Phases 1 à 3 est en grande partie **déjà implémenté** (le dossier patient est complet de bout en bout). Le travail restant n'est donc pas de *construire* mais de **vérifier en exécution**, **valider le design avec Kader**, et **corriger quelques gaps ciblés** (voir chaque phase).
 
-**Prochaine étape : Phase 1 — refonte de la fiche patient.**
+**Prochaine étape :** vérifier le dossier patient (Phase 1) sur l'app en exécution + valider le design, puis corriger le champ dosage caché (Phase 3).
 
 ---
 
@@ -51,20 +51,25 @@ Le frein restant n'est pas le nombre de features mais la **finition** : design d
 
 ---
 
-## Phase 1 · Refonte Fiche Patient 🟡 PROCHAINE
-> La remarque la plus structurante. Aujourd'hui la fiche ressemble à une « fiche produit » (tuiles), pas à un dossier médical.
+## Phase 1 · Refonte Fiche Patient ✅ CODE COMPLET — à vérifier / valider design
+> La remarque la plus structurante. La fiche a été refondue en dossier 2 colonnes (identité à gauche, clinique à droite).
 > Réf. design : `docs/Kaki/images/design-medical.pdf` + `medical-record.webp`.
+> _Audité sur le code : tout est implémenté de bout en bout (route front + handler back). Reste : **vérification fonctionnelle en exécution** et **validation visuelle par Kader** contre la réf. design._
 
-- ⬜ Repenser la fiche en **vrai dossier patient** : colonne identité/infos à gauche, contenu clinique structuré à droite (antécédents, dernières consultations, constantes, ordonnances).
-- ✅ **Recherche patient (page Patients)** : navigation clavier (↑ ↓ + Entrée + Échap) dans les résultats — _déjà livré._
-- ⬜ **Performance liste patients** : pas de chargement total au démarrage → **pagination / infinite scroll** + recherche serveur limitée (adapté connexion bas débit, voir doc feedback pour la stratégie).
+- ✅ Fiche en **vrai dossier patient** : colonne identité à gauche (liste propre, plus de tuiles « fiche produit »), clinique à droite (antécédents/allergies, consultations, facturation).
+- ✅ **Recherche patient (page Patients)** : navigation clavier (↑ ↓ + Entrée + Échap).
+- ✅ **Performance liste patients** : pagination serveur (pageSize 20, skip/limit Mongo) + infinite scroll + recherche serveur debouncée 300 ms — jamais de chargement total. Adapté bas débit.
 - Bloc **Consultations** dans la fiche :
-  - ⬜ Bouton **« Ajouter une consultation »** depuis le dossier → ouvre une consultation avec le patient déjà sélectionné.
-  - ⬜ Clic sur une consultation existante → afficher ce que le médecin a saisi : **constantes vitales, anamnèse, notes complémentaires, diagnostic & honoraires**.
-  - ⬜ **Ordonnance imprimable** depuis le détail de consultation (ouvrir / lancer l'impression).
-- ⬜ Trancher l'utilité de la **« fiche complète patient »** (voir doc feedback — proposition : la fusionner dans le nouveau dossier).
+  - ✅ Bouton **« Ajouter une consultation »** → ouvre `/consultation?patientId=` avec le patient pré-sélectionné et verrouillé.
+  - ✅ Clic sur une consultation → panneau détaillé : **constantes vitales, anamnèse, examen, notes, diagnostic & honoraires**.
+  - ✅ **Ordonnance imprimable** (PDF QuestPDF côté serveur, en-tête médecin) depuis le détail.
+- ✅ Pas de **« fiche complète patient »** redondante (n'existe pas / déjà fusionnée).
 
 **Signal de succès :** un médecin ouvre un patient, voit son historique d'un coup d'œil, démarre une consultation en un clic et imprime l'ordonnance — sans quitter la fiche.
+
+**Vérifié le 21/06/2026** (app en exécution, login → dossier → détail consultation → ordonnance) : flux complet fonctionnel. Bug trouvé et corrigé au passage : création d'un 2ᵉ patient **sans NSS** échouait (index unique `nss` rejetait les `null` en double) → index unique partiel par cabinet. Les accents (« Frères », « épouse ») sont bien gérés en création ; seul l'ancien enregistrement seed « Benali » contient des caractères corrompus (donnée obsolète, cosmétique).
+
+**Reste à faire :** ▢ validation visuelle Kader (la réf. `design-medical.pdf` est un template riche avec courbes/calendrier — à arbitrer : on reste sur le dossier sobre actuel, ou on enrichit ?) · ▢ nettoyer l'ancien enregistrement « Benali » corrompu · ▢ supprimer le patient de test « Tést Éncodàgé » créé pendant la vérification.
 
 ---
 
@@ -72,24 +77,26 @@ Le frein restant n'est pas le nombre de features mais la **finition** : design d
 > Identifié par Kader comme « beaucoup de travail à venir ». Mérite son propre chantier.
 > Réf. design : `docs/Kaki/images/calendar.webp`.
 
-- Corriger l'affichage actuel : trop zoomé, navigation peu fluide/intuitive.
-- Bouton **« Aujourd'hui »** pour revenir à la date du jour.
-- Supprimer le **doublon** du bouton « Nouveau RDV » (un seul, en haut).
-- Vue **semaine** affichant la **journée entière** (~12 h visibles d'un coup, pas une fenêtre de 6 h).
-- À détailler en spec dédiée (vues jour/semaine/mois, création/déplacement de RDV, statuts).
+- ✅ Bouton **« Aujourd'hui »** pour revenir à la date du jour.
+- ✅ Doublon du bouton « Nouveau RDV » supprimé (un seul, en haut).
+- ✅ Vue **semaine** affichant la **journée entière d'un coup** sans scroll (timeline 08:00–20:00, ajustée à la hauteur écran).
+- ✅ Création de RDV via modale (recherche patient, date, heure, durée, type, motif).
+- 🟡 Affaire à arbitrer : démarrer la timeline à **07:00** plutôt que 08:00 (mineur).
+- ⬜ Bascule de vues **jour / semaine / mois** (non demandé explicitement — à confirmer si utile).
+- ⬜ **Déplacer un RDV** (drag-to-reschedule / édition) — non implémenté.
 
 ---
 
 ## Phase 3 · Consultation & Ordonnance — ergonomie de saisie ⬜
 > Principe directeur : le médecin écrit **vite**, peu de clics, peu d'allers-retours clavier/souris.
 
-- **Dropdown patient** : compacter (ne pas garder une grande zone une fois le patient sélectionné).
-- **Constantes vitales** : champs courts (5-6 caractères) → resserrer la mise en page, arrêter de gaspiller l'espace.
-- Anamnèse / Examen : OK pour l'instant.
+- ✅ **Dropdown patient** : se compacte en barre fine (avatar + nom + « Changer ») une fois le patient sélectionné.
+- ✅ **Constantes vitales** : champs courts en ligne (flex-wrap, largeurs 66-92px) — espace resserré.
+- ✅ Anamnèse / Examen : OK.
 - **Ordonnance** :
-  - **Liste de médicaments** auto-complétée à partir de la **Nomenclature Nationale des Produits Pharmaceutiques** (source officielle ANPP / Ministère de l'Industrie Pharmaceutique) + possibilité pour le médecin d'ajouter un médicament libre. Détails sourcing dans le doc feedback.
-  - **Posologie** saisie sur la même ligne que le nom du médicament (gain de place).
-  - Remplacer le champ ambigu **« Fréquence »** par un format bref à valider (proposition dans le doc feedback).
+  - ✅ **Liste de médicaments** auto-complétée sur la nomenclature (`/medicaments.json`) + ajout libre (« … sera utilisé tel quel »).
+  - 🟡 **Posologie / dosage** : le champ `dosage` existe dans le modèle mais est **caché dans l'UI** (`type="hidden"`) → aucun moyen de le saisir. **À corriger** (gap fonctionnel réel).
+  - ⬜ Champ **« Prise »** : encore en texte libre (placeholder « matin et soir… »). Le format bref **« 1-0-1 + durée »** reste à valider avec un médecin avant de structurer.
 
 ---
 
