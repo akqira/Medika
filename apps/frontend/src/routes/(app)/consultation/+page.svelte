@@ -267,7 +267,7 @@
 					<!-- En-têtes de colonnes -->
 					<div class="ord-grid ord-head">
 						<span class="ord-h">Médicament</span>
-												<span class="ord-h">Prise</span>
+						<span class="ord-h">Posologie</span>
 						<span class="ord-h">Durée</span>
 						<span class="ord-h" style="text-align:center">Qté</span>
 						<span></span>
@@ -284,11 +284,7 @@
 							<input
 								value={med.dosage}
 								oninput={(e) => updateMed(med.id, 'dosage', (e.target as HTMLInputElement).value)}
-								type="hidden" tabindex="-1" />
-							<input
-								value={med.frequency}
-								oninput={(e) => updateMed(med.id, 'frequency', (e.target as HTMLInputElement).value)}
-								class="mk-input" style="min-width:0" placeholder="matin et soir…" title="Prise — texte libre" />
+								class="mk-input" style="min-width:0" placeholder="1 cp matin et soir" title="Posologie — texte libre" />
 							<input
 								value={med.duration}
 								oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}
@@ -348,7 +344,7 @@
 	/* Ordonnance — lignes pleine largeur, colonnes alignées */
 	.ord-grid {
 		display: grid;
-		grid-template-columns: minmax(0, 2.8fr) minmax(0, 1.6fr) minmax(0, 1fr) 72px 32px;
+		grid-template-columns: minmax(0, 2.6fr) minmax(0, 2fr) minmax(0, 1fr) 72px 32px;
 		gap: 8px;
 		align-items: center;
 		margin-bottom: 9px;
