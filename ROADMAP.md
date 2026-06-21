@@ -28,6 +28,7 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 - ✅ Retirer le compteur « nombre de médecins » (stats remplacées par Wilayas / Algérienne / Disponibilité).
 - ✅ Champ mot de passe : **une seule** icône œil à droite (l'icône de gauche est un cadenas non cliquable).
 - ✅ **Mot de passe oublié** — flux e-mail de bout en bout : page `/forgot-password` → token à usage unique (haché, expire en 30 min) → page `/reset-password`. Sans énumération de comptes (réponse générique), token consommé après usage. **Canal e-mail** retenu (SMS reporté). Livraison via `IPasswordResetSender` : pour l'instant le lien est **journalisé côté serveur** (`LoggingPasswordResetSender`) — il restera à brancher un vrai fournisseur e-mail (Resend/SendGrid/SMTP) le moment venu, sans toucher au reste. Couvert par `e2e/password-reset.spec.ts`.
+- ✅ **Rate-limit auth par IP client** : `login` / `forgot-password` / `reset-password` sont throttlés 5/60s, désormais **keyés sur l'IP réelle de l'utilisateur** que le BFF transmet en en-tête `X-Client-IP` (et non `X-Forwarded-For`, réécrit par l'hôte avec l'IP du BFF). Skippé en Development. Ancien `AddRateLimiter("login")` ASP.NET mort retiré.
 - ✅ **CGU** + **Politique de confidentialité** + conformité loi 18-07 : en place (`docs/legal/`). Médecin = responsable de traitement, transparence patient. Le volet ANPDP algérien est séquencé pour plus tard — pas un blocage du pilote.
 
 ### Dashboard

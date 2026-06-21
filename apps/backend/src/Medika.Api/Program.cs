@@ -7,11 +7,9 @@ using Medika.Infrastructure.Auth;
 using Medika.Infrastructure.Persistence;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
-using System.Threading.RateLimiting;
 
 // Bootstrap logger — replaced by the full DI-aware configuration in UseSerilog below.
 Log.Logger = new LoggerConfiguration()
@@ -57,18 +55,6 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
-
-builder.Services.AddRateLimiter(opts =>
-{
-    opts.AddFixedWindowLimiter("login", o =>
-    {
-        o.PermitLimit = 5;
-        o.Window = TimeSpan.FromMinutes(1);
-        o.QueueLimit = 0;
-        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-    });
-    opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-});
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.Section).Get<JwtSettings>()!;
 builder.Services
@@ -122,7 +108,6 @@ app.UseMiddleware<HttpDetailLoggingMiddleware>(); // full HTTP detail → App In
 app.UseMiddleware<ApiKeyMiddleware>(); // X-API-KEY + anti-replay timestamp — BFF-only access (eGestion ADR-008)
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
 
 app.UseFastEndpoints(c =>
 {

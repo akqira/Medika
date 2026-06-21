@@ -20,9 +20,9 @@ public class ForgotPasswordEndpoint : Endpoint<ForgotPasswordCommand, ForgotPass
         Post("/api/auth/forgot-password");
         AllowAnonymous();
         // Throttle abuse/enumeration in real environments; skipped in Development
-        // so the E2E suite isn't rate-limited.
+        // so the E2E suite isn't rate-limited. Keyed on the BFF-forwarded client IP.
         if (!Resolve<IHostEnvironment>().IsDevelopment())
-            Throttle(hitLimit: 5, durationSeconds: 60);
+            Throttle(hitLimit: 5, durationSeconds: 60, headerName: "X-Client-IP");
         Summary(s => s.Summary = "Request a password-reset link by email");
     }
 
