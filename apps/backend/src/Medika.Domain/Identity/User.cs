@@ -30,6 +30,10 @@ public sealed class User : AggregateRoot<UserId>
     // Patient-specific — links this User to the PatientId
     public string? LinkedPatientId { get; private set; }
 
+    // Password reset — single-use token (stored hashed) with an expiry.
+    public string? PasswordResetTokenHash { get; private set; }
+    public DateTime? PasswordResetExpiresAtUtc { get; private set; }
+
     private User() { }
 
     public static User Create(
@@ -100,6 +104,31 @@ public sealed class User : AggregateRoot<UserId>
     {
         if (string.IsNullOrWhiteSpace(newPasswordHash)) throw new ArgumentException("Password hash is required.");
         PasswordHash = newPasswordHash;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // ── Password reset ──
+
+    public void SetPasswordResetToken(string tokenHash, DateTime expiresAtUtc)
+    {
+        if (string.IsNullOrWhiteSpace(tokenHash)) throw new ArgumentException("Reset token hash is required.");
+        PasswordResetTokenHash = tokenHash;
+        PasswordResetExpiresAtUtc = expiresAtUtc;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool HasValidPasswordResetToken(DateTime nowUtc) =>
+        PasswordResetTokenHash is not null
+        && PasswordResetExpiresAtUtc is not null
+        && PasswordResetExpiresAtUtc > nowUtc;
+
+    // Sets the new password AND consumes the reset token (single-use).
+    public void ResetPassword(string newPasswordHash)
+    {
+        if (string.IsNullOrWhiteSpace(newPasswordHash)) throw new ArgumentException("Password hash is required.");
+        PasswordHash = newPasswordHash;
+        PasswordResetTokenHash = null;
+        PasswordResetExpiresAtUtc = null;
         UpdatedAt = DateTime.UtcNow;
     }
 }
