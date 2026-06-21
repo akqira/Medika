@@ -218,6 +218,15 @@ Utility classes: `.card`, `.mk-nav`, `.mk-content`, `.mk-input`, `.mk-tab`, `.mk
 
 `feature/*` → `dev` (staging: `dev-medika-api` App Service + Vercel Preview) → `main` (production: `medika-api` + Vercel Production). Workflows: `.github/workflows/backend.yml` (main) and `backend-dev.yml` (dev). Setup guide: `docs/setup/azure-app-service-migration.md`.
 
+### Post-merge rule (non-negotiable)
+
+**Every time a PR is merged, the same change-set must, before the work is considered done:**
+
+1. **Update `ROADMAP.md`** — move the shipped items to their new status (✅ / 🟡 / ⬜ / ⏸️) and note anything the merge changed. The roadmap must never lag behind what's on `dev`.
+2. **Have passing E2E coverage** — every merged feature/bugfix must have a Playwright spec in `apps/frontend/e2e/` that exercises it (failing-path first, per the existing convention) and the suite must pass. If a PR ships behaviour with no e2e spec, add one in the same PR (or an immediate follow-up before the next merge).
+
+A local `gh pr merge` triggers a reminder via the `PostToolUse` hook in `.claude/settings.json`, but the rule applies to **all** merges (including those done from the GitHub web UI).
+
 ## Known gotchas
 
 **Logout link requires two attributes:**
