@@ -104,10 +104,16 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 ---
 
-## Phase 4 · Finances (à cadrer) ⏸️ BLOQUÉE
-> Rien n'a encore été proposé côté produit. Périmètre à définir avec Kader (questions dans le doc feedback).
+## Phase 4 · Finances 🟡 EN COURS
+> Cadrage tranché avec Kader : **recettes + dépenses**, **P&L mensuel (net)**, honoraires via **catalogue d'actes + tarifs**, export comptable **plus tard**.
 
-Pistes (à confirmer) : total du jour / du mois, recettes par période, suivi de dépenses par catégorie, P&L mensuel simple.
+**Déjà en place (audit) :** dépenses (`Charge` : catégorie, montant, date) avec création/liste + page Finances ; factures (recettes, total payé par période) ; **P&L mensuel déjà calculé** (`GetFinancialSummaryHandler` : `NetIncome = recettes − dépenses`, tendance 6 mois, impayés) affiché sur le dashboard et la page Finances.
+
+**À faire :**
+- ✅ **Bug dépenses corrigé** : la page Finances envoyait des catégories en français (« Loyer »…) alors que l'enum backend attend l'anglais (`Rent`…) → `Enum.Parse` échouait, l'ajout plantait. La page envoie désormais la valeur d'enum (libellés FR affichés). Endpoint **DELETE `/api/charges/{id}`** ajouté (scopé cabinet) + proxy ; e2e happy-path (création → affichage → suppression) qui aurait détecté le bug.
+- ⬜ **Catalogue d'actes + tarifs** (n'existe pas) : entité `Act` par cabinet (nom + tarif), CRUD + écran de gestion, puis sélecteur d'acte dans la consultation qui pré-remplit les honoraires (montant restant modifiable). **Prochaine étape.**
+- ⬜ **Répartition des recettes par acte** : `breakdownByType` est codé en dur (« Consultations » 100 %) — le rendre réel une fois les actes typés.
+- ⏸️ Export PDF/Excel comptable — reporté (décision Kader).
 
 ---
 

@@ -51,4 +51,24 @@ test.describe('Finance — add charge validation failures', () => {
 		await expect(page.getByRole('heading', { name: 'Nouvelle charge' })).toBeVisible();
 		await expect(page.locator('#charge-description')).toHaveJSProperty('validity.valid', false);
 	});
+
+	// Happy path — guards the FR-label/EN-enum regression: "Loyer" must persist as
+	// ChargeCategory.Rent (previously Enum.Parse rejected the French label → 400).
+	test('a valid charge is created and shown, then removed (cleanup)', async ({ page }) => {
+		const desc = `E2E loyer ${Date.now()}`;
+		await page.locator('#charge-category').selectOption({ label: 'Loyer' });
+		await page.locator('#charge-description').fill(desc);
+		await page.locator('#charge-amount').fill('5000');
+		await page.getByRole('button', { name: 'Ajouter la charge' }).click();
+
+		await expect(page.getByText('Charge ajoutée avec succès.')).toBeVisible();
+		const row = page.locator('tr[data-charge-id]').filter({ hasText: desc });
+		await expect(row).toBeVisible();
+		await expect(row).toContainText('Loyer'); // category rendered in French
+
+		// Self-clean so the suite stays re-runnable (also covers the delete endpoint).
+		const id = await row.getAttribute('data-charge-id');
+		const res = await page.request.delete(`/api/charges/${id}`);
+		expect(res.status(), `cleanup delete of ${id}`).toBe(204);
+	});
 });
