@@ -91,15 +91,12 @@
 	);
 
 	// Loading & confirm state
-	let submitting    = $state(false);
-	let finalizeValue = $state('false');
-	let formEl        = $state<HTMLFormElement | null>(null);
+	let submitting = $state(false);
+	let formEl     = $state<HTMLFormElement | null>(null);
 
 	function handleFinalize() {
 		if (confirm('Finaliser la consultation ? Cette action ne peut pas être annulée.')) {
-			finalizeValue = 'true';
-			// Use setTimeout to let the hidden input value update before submit
-			setTimeout(() => formEl?.requestSubmit(), 0);
+			formEl?.requestSubmit();
 		}
 	}
 </script>
@@ -115,13 +112,11 @@
 		submitting = true;
 		return async ({ update }) => {
 			submitting = false;
-			finalizeValue = 'false';
 			await update();
 		};
 	}}
 >
 	<!-- Hidden fields -->
-	<input type="hidden" name="finalize" value={finalizeValue} />
 	<input type="hidden" name="appointmentId" value={appointmentId} />
 	<input type="hidden" name="prescription" value={prescriptionJson} />
 	<input type="hidden" name="actName" value={selectedActName} />
@@ -137,12 +132,6 @@
 				<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--danger-light);border:1px solid #FECACA;border-radius:8px;margin-bottom:16px">
 					<Icon name="alertCircle" size={15} color="var(--danger)" />
 					<span style="font-size:13.5px;color:var(--danger);font-weight:500">{form.error}</span>
-				</div>
-			{/if}
-			{#if form?.success}
-				<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--success-light);border:1px solid #A7F3D0;border-radius:8px;margin-bottom:16px">
-					<Icon name="checkCircle" size={15} color="var(--success)" />
-					<span style="font-size:13.5px;color:var(--success);font-weight:500">{form.success}</span>
 				</div>
 			{/if}
 
@@ -344,17 +333,10 @@
 			<!-- Actions -->
 			<div style="display:flex;gap:10px;margin-bottom:8px">
 				<button
-					type="submit"
-					disabled={submitting}
-					style="flex:1;padding:12px;background:var(--bg);color:var(--primary);border:1.5px solid var(--primary);border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;opacity:{submitting ? 0.6 : 1}"
-				>
-					{submitting ? 'Enregistrement…' : 'Enregistrer brouillon'}
-				</button>
-				<button
 					type="button"
 					disabled={submitting}
 					onclick={handleFinalize}
-					style="flex:2;padding:12px;background:var(--primary);color:white;border:none;border-radius:8px;font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;opacity:{submitting ? 0.6 : 1}"
+					style="flex:1;padding:12px;background:var(--primary);color:white;border:none;border-radius:8px;font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;opacity:{submitting ? 0.6 : 1}"
 				>
 					{submitting ? 'Finalisation…' : 'Finaliser la consultation'}
 				</button>

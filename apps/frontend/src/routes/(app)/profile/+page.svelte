@@ -220,19 +220,4 @@
 		</div>
 	</div>
 
-	<!-- Danger zone -->
-	<div style="margin-top:20px;padding:18px 20px;border:1px solid var(--danger-light);border-radius:10px;background:white">
-		<div style="display:flex;align-items:center;justify-content:space-between">
-			<div>
-				<div style="font-size:14px;font-weight:600;color:var(--danger)">Zone de danger</div>
-				<div style="font-size:13px;color:var(--text-muted);margin-top:3px">
-					La suppression de votre compte est irréversible et supprime toutes vos données.
-				</div>
-			</div>
-			<button style="padding:8px 16px;background:white;color:var(--danger);border:1.5px solid var(--danger);border-radius:7px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:20px">
-				Supprimer le compte
-			</button>
-		</div>
-	</div>
-
 </div>
