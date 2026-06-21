@@ -27,7 +27,8 @@ function uniqueLetters(): string {
 }
 
 // Walk the 4-step wizard with a valid identity + phone and NO NSS, then submit.
-async function createPatientWithoutNss(page: Page, firstName: string, lastName: string) {
+// Returns the new patient id parsed from the success redirect (/patients?created=<id>).
+async function createPatientWithoutNss(page: Page, firstName: string, lastName: string): Promise<string> {
 	await page.goto('/patients/new');
 	await expect(page.getByRole('heading', { name: 'Nouveau patient' })).toBeVisible();
 
@@ -49,6 +50,15 @@ async function createPatientWithoutNss(page: Page, firstName: string, lastName: 
 
 	// Step 4 — assurance: deliberately leave the NSS field EMPTY, then submit.
 	await page.getByRole('button', { name: 'Créer le dossier' }).click();
+
+	await expect(page).toHaveURL(/\/patients\?created=/);
+	await expect(
+		page.getByText('Une erreur est survenue lors de la création du dossier.')
+	).toHaveCount(0);
+
+	const created = new URL(page.url()).searchParams.get('created');
+	expect(created, 'success redirect should carry the new patient id').toBeTruthy();
+	return created!;
 }
 
 test.describe('New patient — NSS-null duplicate-key regression', () => {
@@ -58,19 +68,19 @@ test.describe('New patient — NSS-null duplicate-key regression', () => {
 
 	test('two patients created without an NSS both succeed (no dup-key 500)', async ({ page }) => {
 		const uid = uniqueLetters();
-
-		// First NSS-less patient — fine even before the fix.
-		await createPatientWithoutNss(page, 'Test', `Nssone${uid}`);
-		await expect(page).toHaveURL(/\/patients\?created=/);
-		await expect(
-			page.getByText('Une erreur est survenue lors de la création du dossier.')
-		).toHaveCount(0);
-
-		// Second NSS-less patient — this is the one that used to 500 on { nss: null }.
-		await createPatientWithoutNss(page, 'Test', `Nsstwo${uid}`);
-		await expect(page).toHaveURL(/\/patients\?created=/);
-		await expect(
-			page.getByText('Une erreur est survenue lors de la création du dossier.')
-		).toHaveCount(0);
+		const created: string[] = [];
+		try {
+			// First NSS-less patient — fine even before the fix.
+			created.push(await createPatientWithoutNss(page, 'Test', `Nssone${uid}`));
+			// Second NSS-less patient — this is the one that used to 500 on { nss: null }.
+			created.push(await createPatientWithoutNss(page, 'Test', `Nsstwo${uid}`));
+		} finally {
+			// Self-clean so the suite stays re-runnable. The DELETE proxy also gives
+			// the new delete-patient endpoint its happy-path e2e coverage (expect 204).
+			for (const id of created) {
+				const res = await page.request.delete(`/api/patients/${id}`);
+				expect(res.status(), `cleanup delete of ${id}`).toBe(204);
+			}
+		}
 	});
 });

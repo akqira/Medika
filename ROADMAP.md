@@ -69,7 +69,9 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 **Vérifié le 21/06/2026** (app en exécution, login → dossier → détail consultation → ordonnance) : flux complet fonctionnel. Bug trouvé et corrigé au passage : création d'un 2ᵉ patient **sans NSS** échouait (index unique `nss` rejetait les `null` en double) → index unique partiel par cabinet. **Couvert par un test e2e de régression** (`apps/frontend/e2e/patient-new-nss.spec.ts` : deux patients sans NSS créés à la suite — vert). Les accents (« Frères », « épouse ») sont bien gérés en création ; seul l'ancien enregistrement seed « Benali » contient des caractères corrompus (donnée obsolète, cosmétique).
 
-**Reste à faire :** ▢ validation visuelle Kader (la réf. `design-medical.pdf` est un template riche avec courbes/calendrier — à arbitrer : on reste sur le dossier sobre actuel, ou on enrichit ?) · ▢ nettoyer l'ancien enregistrement « Benali » corrompu · ▢ supprimer le patient de test « Tést Éncodàgé » créé pendant la vérification.
+**Outils ajoutés :** endpoint **DELETE `/api/patients/{id}`** (scopé cabinet, refus 400 si consultations/factures liées) + route proxy SvelteKit ; le test e2e NSS s'auto-nettoie désormais via cet endpoint (re-jouable, sans accumulation).
+
+**Reste à faire :** ▢ validation visuelle Kader (la réf. `design-medical.pdf` est un template riche avec courbes/calendrier — à arbitrer : on reste sur le dossier sobre actuel, ou on enrichit ?) · ▢ nettoyer les anciens enregistrements résiduels (« Benali » corrompu, patients de test créés avant l'auto-nettoyage) — possible maintenant via l'endpoint DELETE.
 
 ---
 

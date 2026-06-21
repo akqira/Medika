@@ -16,3 +16,13 @@ export const GET: RequestHandler = async ({ params, cookies }) => {
 		return json({ error: msg }, { status: 500 });
 	}
 };
+
+export const DELETE: RequestHandler = async ({ params, cookies }) => {
+	const token = getToken(cookies);
+	if (!token) error(401, 'Non authentifié');
+
+	// Backend returns 204; RemoteApi maps that to undefined. Auth/404/409 surface
+	// as SvelteKit errors thrown by the proxy, so let them propagate.
+	await api.del(`/api/patients/${params.id}`, token);
+	return new Response(null, { status: 204 });
+};
