@@ -12,8 +12,11 @@ test.describe('Consultation — save failures', () => {
 		await expect(page.getByRole('heading', { name: 'Nouvelle consultation' })).toBeVisible();
 	});
 
-	test('saving a draft with no patient selected is rejected by the server', async ({ page }) => {
-		await page.getByRole('button', { name: 'Enregistrer brouillon' }).click();
+	test('finalising with no patient selected is rejected by the server', async ({ page }) => {
+		// The draft path is gone — finalising is the only submit. Accept the
+		// confirmation so the form actually submits and hits the server guard.
+		page.on('dialog', (dialog) => dialog.accept());
+		await page.getByRole('button', { name: 'Finaliser la consultation' }).click();
 		await expect(page.getByText('Veuillez sélectionner un patient.')).toBeVisible();
 		// Still on the consultation page — nothing was created.
 		await expect(page).toHaveURL(/\/consultation/);

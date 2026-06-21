@@ -37,7 +37,6 @@ export const actions: Actions = {
 		const notes         = data.get('notes')?.toString() ?? '';
 		const tariff        = Number(data.get('tariff') ?? 0);
 		const actName       = data.get('actName')?.toString() || undefined;
-		const finalize      = data.get('finalize') === 'true';
 
 		const prescriptionRaw = data.get('prescription')?.toString() ?? '[]';
 		let prescription: unknown[] = [];
@@ -73,17 +72,13 @@ export const actions: Actions = {
 				prescription,
 				tariff,
 				actName,
-				finalize,
+				finalize: true,
 			}, token);
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : 'Erreur serveur.';
 			return fail(500, { error: msg });
 		}
 
-		if (finalize) {
-			redirect(303, `/patients?created=${result.consultationId}`);
-		}
-
-		return { success: 'Consultation enregistrée en brouillon.' };
+		redirect(303, `/patients?created=${result.consultationId}`);
 	},
 };

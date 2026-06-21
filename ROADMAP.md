@@ -105,6 +105,8 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
   - ✅ **Posologie** : champ **texte libre visible** sur la ligne d'ordonnance (placeholder « 1 cp matin et soir »), affiché à côté du nom du médicament dans le dossier/PDF. Le champ `dosage` n'est plus caché. Couvert par un test e2e (`consultation.spec.ts`).
   - ✅ Champ ambigu **« Prise » / « Fréquence » retiré** (« laisse tomber, c'est ambigus » — feedback Kader).
   - ✅ **Raccourci posologie « 1-0-1-0 »** : en plus du texte libre, taper un motif `matin-midi-soir-coucher` (3 ou 4 segments) affiche un aperçu en direct (« = 1 matin, 2 soir, 1 coucher ») et se normalise au blur. Le texte libre reste prioritaire (un motif non reconnu n'est pas modifié). Logique pure dans `src/lib/posology.ts` (test unitaire vitest) + e2e dans `consultation.spec.ts`.
+- ✅ **Brouillon de consultation retiré** : le bouton « Enregistrer brouillon » et l'état intermédiaire sont supprimés — une consultation se **finalise** directement (un seul bouton, `finalize: true`). Simplifie le flux et évite les consultations à moitié saisies. e2e `consultation.spec.ts` mis à jour (le garde « patient requis » passe désormais par la finalisation).
+- ✅ **« Zone de danger » (suppression de compte) retirée** de la page Profil — fonctionnalité non implémentée côté backend, le bouton ne faisait rien.
 
 ---
 
