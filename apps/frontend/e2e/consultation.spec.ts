@@ -87,3 +87,37 @@ test.describe('Consultation — ordonnance posologie', () => {
 		await expect(posologie).toHaveValue('1 cp au besoin');
 	});
 });
+
+// Act catalogue → consultation: selecting an act pre-fills the honoraires.
+test.describe('Consultation — act picker', () => {
+	test('selecting a catalogue act pre-fills the honoraires', async ({ page }) => {
+		await login(page);
+
+		// Seed an act in the catalogue and grab its id.
+		const name = `E2E acte ${Date.now()}`;
+		await page.goto('/actes');
+		await page.locator('#act-name').fill(name);
+		await page.locator('#act-tariff').fill('3000');
+		await page.getByRole('button', { name: 'Ajouter' }).click();
+		const row = page.locator('tr[data-act-id]').filter({ hasText: name });
+		await expect(row).toBeVisible();
+		const actId = await row.getAttribute('data-act-id');
+
+		try {
+			await page.goto('/consultation');
+			await expect(page.getByRole('heading', { name: 'Nouvelle consultation' })).toBeVisible();
+
+			await page.locator('#act').selectOption(actId!);
+			// Honoraires auto-filled from the act's tariff.
+			await expect(page.locator('#tariff')).toHaveValue('3000');
+		} finally {
+			// Cleanup so the suite stays re-runnable.
+			await page.goto('/actes');
+			await page
+				.locator('tr[data-act-id]')
+				.filter({ hasText: name })
+				.getByRole('button', { name: "Supprimer l'acte" })
+				.click();
+		}
+	});
+});

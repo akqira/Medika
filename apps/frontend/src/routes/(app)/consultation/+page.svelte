@@ -45,6 +45,13 @@
 	let notes          = $state('');
 	let fee            = $state('');
 
+	// Act catalogue: picking an act pre-fills the honoraires (still overridable).
+	let selectedActId = $state('');
+	function applyAct() {
+		const act = data.acts.find((a) => a.id === selectedActId);
+		if (act) fee = String(act.tariff);
+	}
+
 	// Liste médicaments : démarre sur le jeu intégré, puis remplace par la
 	// nomenclature complète (static/medicaments.json) si elle a été générée.
 	let medList = $state<string[]>(MEDICAMENTS);
@@ -233,6 +240,18 @@
 					<textarea id="diagnosis" name="diagnosis" bind:value={diagnosis} class="mk-input" rows="2" placeholder="Diagnostic principal…"></textarea>
 				</div>
 				<div>
+					<label for="act" style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:5px">Acte</label>
+					<select id="act" bind:value={selectedActId} onchange={applyAct} class="mk-input" style="max-width:320px;margin-bottom:12px">
+						<option value="">— Acte libre —</option>
+						{#each data.acts as a}
+							<option value={a.id}>{a.name} — {a.tariff} DA</option>
+						{/each}
+					</select>
+					{#if data.acts.length === 0}
+						<p style="font-size:11.5px;color:var(--text-muted);margin:-6px 0 12px">
+							Aucun acte. <a href="/actes" style="color:var(--primary)">Gérer le catalogue</a>.
+						</p>
+					{/if}
 					<label for="tariff" style="font-size:13px;color:var(--text-muted);display:block;margin-bottom:5px">Honoraires (DA)</label>
 					<input id="tariff" name="tariff" bind:value={fee} class="mk-input" type="number" min="0" placeholder="0" style="max-width:200px" />
 				</div>
