@@ -1,18 +1,27 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { api } from '$lib/server/api';
 import { getToken } from '$lib/server/session';
-import type { PagedResult, PatientSummary } from '$lib/types/api';
+import type { PagedResult, PatientSummary, Act } from '$lib/types/api';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
 	const token = getToken(cookies)!;
-	const patients = await api
-		.get<PagedResult<PatientSummary>>('/api/patients?page=1&pageSize=100', token)
-		.catch((): PagedResult<PatientSummary> => ({
-			items: [], totalCount: 0, page: 1, pageSize: 100,
-			totalPages: 0, hasNextPage: false, hasPreviousPage: false
-		}));
-	return { patients: patients.items };
+
+	type ActItem = Omit<Act, 'id'> & { actId: string };
+	const [patients, acts] = await Promise.all([
+		api
+			.get<PagedResult<PatientSummary>>('/api/patients?page=1&pageSize=100', token)
+			.catch((): PagedResult<PatientSummary> => ({
+				items: [], totalCount: 0, page: 1, pageSize: 100,
+				totalPages: 0, hasNextPage: false, hasPreviousPage: false
+			})),
+		api
+			.get<{ items: ActItem[] }>('/api/acts', token)
+			.then(({ items }) => items.map(({ actId, ...rest }): Act => ({ id: actId, ...rest })))
+			.catch(() => [] as Act[])
+	]);
+
+	return { patients: patients.items, acts };
 };
 
 export const actions: Actions = {
@@ -27,6 +36,7 @@ export const actions: Actions = {
 		const diagnosis     = data.get('diagnosis')?.toString() ?? '';
 		const notes         = data.get('notes')?.toString() ?? '';
 		const tariff        = Number(data.get('tariff') ?? 0);
+		const actName       = data.get('actName')?.toString() || undefined;
 		const finalize      = data.get('finalize') === 'true';
 
 		const prescriptionRaw = data.get('prescription')?.toString() ?? '[]';
@@ -62,6 +72,7 @@ export const actions: Actions = {
 				vitalSigns,
 				prescription,
 				tariff,
+				actName,
 				finalize,
 			}, token);
 		} catch (e: unknown) {

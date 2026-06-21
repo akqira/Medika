@@ -12,11 +12,12 @@ export const api = {
 	get: <T>(path: string, token?: string) =>
 		RemoteApi.fetchThenRetrieveJson<T>({ url: path, options: { method: 'GET' }, token }),
 
-	post: <T>(path: string, body: unknown, token?: string) =>
+	post: <T>(path: string, body: unknown, token?: string, clientIp?: string) =>
 		RemoteApi.fetchThenRetrieveJson<T>({
 			url: path,
 			options: { method: 'POST', body: JSON.stringify(body) },
-			token
+			token,
+			clientIp
 		}),
 
 	patch: <T>(path: string, body: unknown, token?: string) =>

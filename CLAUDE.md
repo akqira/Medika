@@ -72,9 +72,43 @@ pnpm dev          # dev server on http://localhost:5173
 pnpm build        # production build
 pnpm check        # svelte-check + TS type checking
 pnpm check:watch  # same, watch mode
+pnpm test         # vitest unit tests (run once)
+pnpm test:e2e     # Playwright E2E (needs BOTH apps running — see below)
+pnpm test:e2e:ui  # Playwright in interactive UI mode (recommended)
 ```
 
 Run from the repo root or from `apps/frontend/` — pnpm workspace resolves either way.
+
+#### End-to-end tests (Playwright)
+
+E2E specs live in `apps/frontend/e2e/`. The config (`playwright.config.ts`) has **no
+`webServer`** on purpose — start both apps yourself first (backend needs MongoDB + the
+HTTPS dev profile), then run the suite against `https://localhost:5000`:
+
+```powershell
+dotnet run --project apps/backend/src/Medika.Api --launch-profile https   # :5100
+cd apps/frontend; pnpm dev                                                 # :5000
+pnpm test:e2e:ui
+```
+
+Seeded-doctor credentials come from `e2e/.env.test` (gitignored) or the `E2E_EMAIL` /
+`E2E_PASSWORD` env vars; `e2e/helpers.ts` exposes a shared `login(page)` helper. The
+suite is **failing-situation-first** (TDD-style): each manual scenario in
+`docs/manual-test-scenarios.md` has a spec covering its observable failure modes.
+
+| Spec | Covers (scenario) | Failure modes asserted |
+|------|-------------------|------------------------|
+| `login.spec.ts` | Login | wrong password, unknown email (no enumeration), empty/partial fields, already-auth redirect |
+| `auth-guard.spec.ts` | All `(app)` routes | unauthenticated access → `/login`; logout re-protects |
+| `patient-new.spec.ts` | 3 — Add patient | per-step wizard validation: required, letters-only name, phone/email format, 15-digit NSS |
+| `consultation.spec.ts` | 4/5 — Consultation | save with no patient rejected; finalize confirmation; add/remove médicament |
+| `finance-charges.spec.ts` | 6/9 — Charges | required category/description, amount `min=1` (0 / negative) |
+| `schedule-booking.spec.ts` | 7 — Agenda | no-patient guard, empty search, min-2-char search, Escape/Cancel close |
+| `patient-search.spec.ts` | 8 — Search | empty result state, keyboard nav no-op on empty list |
+| `profile-security.spec.ts` | 2/10 — Password | mismatch, `< 8` chars, wrong current password, required fields |
+
+Negative tests are written to be **non-mutating and re-runnable** (e.g. the wrong-current-password
+case never actually changes the seeded password).
 
 ### Backend (`apps/backend/`)
 
@@ -85,7 +119,8 @@ dotnet run --project apps/backend/src/Medika.Api
 
 Build the whole solution: `dotnet build apps/backend/Medika.slnx`
 
-There are **no tests** in the project yet.
+The **backend** has no automated tests yet. The **frontend** has vitest unit tests and a
+Playwright E2E suite (`apps/frontend/e2e/`) — see the Frontend Commands section above.
 
 ---
 
@@ -182,6 +217,15 @@ Utility classes: `.card`, `.mk-nav`, `.mk-content`, `.mk-input`, `.mk-tab`, `.mk
 ## Branches & deployment
 
 `feature/*` → `dev` (staging: `dev-medika-api` App Service + Vercel Preview) → `main` (production: `medika-api` + Vercel Production). Workflows: `.github/workflows/backend.yml` (main) and `backend-dev.yml` (dev). Setup guide: `docs/setup/azure-app-service-migration.md`.
+
+### Post-merge rule (non-negotiable)
+
+**Every time a PR is merged, the same change-set must, before the work is considered done:**
+
+1. **Update `ROADMAP.md`** — move the shipped items to their new status (✅ / 🟡 / ⬜ / ⏸️) and note anything the merge changed. The roadmap must never lag behind what's on `dev`.
+2. **Have passing E2E coverage** — every merged feature/bugfix must have a Playwright spec in `apps/frontend/e2e/` that exercises it (failing-path first, per the existing convention) and the suite must pass. If a PR ships behaviour with no e2e spec, add one in the same PR (or an immediate follow-up before the next merge).
+
+A local `gh pr merge` triggers a reminder via the `PostToolUse` hook in `.claude/settings.json`, but the rule applies to **all** merges (including those done from the GitHub web UI). The Playwright suite runs in CI on every PR/push touching `apps/**` via `.github/workflows/e2e.yml` (fresh Mongo + API + Vite), so "passing e2e" is enforced automatically.
 
 ## Known gotchas
 

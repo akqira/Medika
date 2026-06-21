@@ -36,6 +36,7 @@ public static class DomainMappings
             BsonSerializer.RegisterSerializer(new ConsultationIdSerializer());
             BsonSerializer.RegisterSerializer(new InvoiceIdSerializer());
             BsonSerializer.RegisterSerializer(new ChargeIdSerializer());
+            BsonSerializer.RegisterSerializer(new ActIdSerializer());
             BsonSerializer.RegisterSerializer(new UserIdSerializer());
 
             // BloodGroup value object
@@ -51,6 +52,7 @@ public static class DomainMappings
             RegisterConsultationMap();
             RegisterInvoiceMap();
             RegisterChargeMap();
+            RegisterActMap();
             RegisterUserMap();
 
             _registered = true;
@@ -128,6 +130,16 @@ public static class DomainMappings
         });
     }
 
+    private static void RegisterActMap()
+    {
+        if (BsonClassMap.IsClassMapRegistered(typeof(Act))) return;
+        BsonClassMap.RegisterClassMap<Act>(cm =>
+        {
+            cm.AutoMap();
+            cm.SetIgnoreExtraElements(true);
+        });
+    }
+
     private static void RegisterUserMap()
     {
         if (BsonClassMap.IsClassMapRegistered(typeof(User))) return;
@@ -178,6 +190,14 @@ file sealed class ChargeIdSerializer() : SerializerBase<ChargeId>
     public override ChargeId Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
         => ChargeId.From(ctx.Reader.ReadString());
     public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, ChargeId value)
+        => ctx.Writer.WriteString(value.ToString());
+}
+
+file sealed class ActIdSerializer() : SerializerBase<ActId>
+{
+    public override ActId Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
+        => ActId.From(ctx.Reader.ReadString());
+    public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, ActId value)
         => ctx.Writer.WriteString(value.ToString());
 }
 

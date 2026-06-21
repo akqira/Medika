@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IConsultationRepository, ConsultationRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IChargeRepository, ChargeRepository>();
+        services.AddScoped<IActRepository, ActRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
     }
 
@@ -62,6 +63,7 @@ public static class DependencyInjection
         services.AddSingleton(jwtSettings);
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<IPasswordResetSender, LoggingPasswordResetSender>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
     }

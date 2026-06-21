@@ -15,7 +15,8 @@ public class GetPatientConsultationsEndpoint : Endpoint<GetPatientConsultationsR
     public override void Configure()
     {
         Get("/api/patients/{id}/consultations");
-        Roles("Doctor");
+        // ADR-002: receptionists may call this; the handler returns metadata-only for them.
+        Roles("Doctor", "Receptionist");
     }
 
     public override async Task<ConsultationListResult> ExecuteAsync(GetPatientConsultationsRequest req, CancellationToken ct)

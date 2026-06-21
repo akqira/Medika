@@ -15,13 +15,16 @@ public sealed class Invoice : AggregateRoot<InvoiceId>
     public PaymentMethod? PaymentMethod { get; private set; }
     public DateTime? PaidAt { get; private set; }
     public DateTime IssuedAt { get; private init; }
+    // The catalogue act billed (for revenue breakdown). Null = free/unspecified act.
+    public string? ActName { get; private set; }
 
     private Invoice() { }
 
     public static Invoice CreateFromConsultation(
         string cabinetId,
         string patientId, string consultationId,
-        string doctorId, decimal amount, string number)
+        string doctorId, decimal amount, string number,
+        string? actName = null)
     {
         return new Invoice
         {
@@ -34,6 +37,7 @@ public sealed class Invoice : AggregateRoot<InvoiceId>
             Number = number,
             Status = InvoiceStatus.Pending,
             IssuedAt = DateTime.UtcNow,
+            ActName = string.IsNullOrWhiteSpace(actName) ? null : actName.Trim(),
         };
     }
 

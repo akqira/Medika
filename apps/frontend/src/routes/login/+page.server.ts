@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
+	default: async ({ request, cookies, getClientAddress }) => {
 		const data = await request.formData();
 		const email = data.get('email')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
@@ -17,13 +17,16 @@ export const actions: Actions = {
 			return fail(400, { error: 'Email et mot de passe requis.' });
 		}
 
+		let clientIp: string | undefined;
+		try { clientIp = getClientAddress(); } catch { /* unavailable → backend throttle falls back */ }
+
 		try {
 			const result = await api.post<{
 				token: string;
 				userId: string;
 				role: string;
 				fullName: string;
-			}>('/api/auth/login', { email, password });
+			}>('/api/auth/login', { email, password }, undefined, clientIp);
 
 			setToken(cookies, result.token);
 			setUser(cookies, { fullName: result.fullName, role: result.role });

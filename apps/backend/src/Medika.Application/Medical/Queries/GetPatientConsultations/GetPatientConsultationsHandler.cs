@@ -16,8 +16,13 @@ public class GetPatientConsultationsHandler(
 
         var (items, total) = await consultations.GetByPatientPagedAsync(cabinetId, query.PatientId, query.Page, query.PageSize, ct);
 
-        var summaries = items
-            .Select(c => new ConsultationSummary(
+        // ADR-002 — role-shaped projection. Doctors get the full clinical summary;
+        // everyone else (Receptionist and any non-Doctor role) gets metadata only.
+        // Fail safe: the full summary is returned ONLY for an explicit Doctor role.
+        var isDoctor = string.Equals(currentUser.Role, "Doctor", StringComparison.Ordinal);
+
+        IReadOnlyList<object> projected = isDoctor
+            ? items.Select(c => (object)new ConsultationSummary(
                 c.Id.ToString(),
                 c.Date,
                 c.Reason,
@@ -25,9 +30,12 @@ public class GetPatientConsultationsHandler(
                 c.Tariff,
                 c.IsFinalized,
                 c.Prescription.Count,
-                c.AppointmentId))
-            .ToList();
+                c.AppointmentId)).ToList()
+            : items.Select(c => (object)new ConsultationMetadata(
+                c.Id.ToString(),
+                c.Date,
+                c.IsFinalized)).ToList();
 
-        return new ConsultationListResult(query.PatientId, total, query.Page, query.PageSize, summaries);
+        return new ConsultationListResult(query.PatientId, total, query.Page, query.PageSize, projected);
     }
 }

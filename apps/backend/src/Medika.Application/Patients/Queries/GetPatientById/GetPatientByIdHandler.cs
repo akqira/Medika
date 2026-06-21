@@ -15,7 +15,11 @@ public class GetPatientByIdHandler(
         if (string.IsNullOrEmpty(cabinetId))
             throw new UnauthorizedAccessException("Missing cabinet claim — please re-login.");
 
-        var patient = await patients.GetByIdAsync(PatientId.From(query.Id), ct);
+        // A malformed id is treated as not-found (→ 404), never a 500.
+        var patientId = PatientId.TryFrom(query.Id);
+        if (patientId is null) return null;
+
+        var patient = await patients.GetByIdAsync(patientId, ct);
         if (patient is null) return null;
 
         // Cabinet guard — treat cross-cabinet access as not-found (no information leak).

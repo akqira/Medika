@@ -12,7 +12,11 @@ public record ConsultationListResult(
     long TotalCount,
     int Page,
     int PageSize,
-    List<ConsultationSummary> Items);
+    // Object-typed so the handler can return either full ConsultationSummary (Doctor)
+    // or trimmed ConsultationMetadata (Receptionist) per ADR-002. System.Text.Json
+    // serializes each element by its runtime type, so clinical fields are physically
+    // ABSENT from the receptionist payload — not merely null.
+    IReadOnlyList<object> Items);
 
 public record ConsultationSummary(
     string ConsultationId,
@@ -23,6 +27,16 @@ public record ConsultationSummary(
     bool IsFinalized,
     int PrescriptionCount,
     string? AppointmentId);
+
+/// <summary>
+/// Receptionist-safe projection (ADR-002): a visit happened and when, nothing clinical.
+/// Deliberately carries NO Reason / Diagnosis / Tariff / PrescriptionCount — front-desk
+/// staff must never see diagnoses. Tariff reaches receptionists via invoices, not here.
+/// </summary>
+public record ConsultationMetadata(
+    string ConsultationId,
+    DateTime Date,
+    bool IsFinalized);
 
 public record ConsultationDetail(
     string ConsultationId,

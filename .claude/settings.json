@@ -1,12 +1,34 @@
 {
   "hooks": {
-  "PostToolUse": [
-    {
-      "matcher": "Edit|Write",
-      "hooks": [{ "type": "command", "command": "cd apps/frontend && pnpm check 2>&1 | tail -20", "shell": "bash", "timeout": 60, "statusMessage": "Checking frontend types..." }]
-    }
-  ]
-},
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "cd apps/frontend && pnpm check 2>&1 | tail -20", "shell": "bash", "timeout": 60, "statusMessage": "Checking frontend types..." }]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "c=$(cat); echo \"$c\" | grep -qiE 'gh +pr +merge' && printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"PROJECT RULE (post-merge): a PR was just merged. Before this task is done you MUST (1) update ROADMAP.md to reflect what shipped, and (2) ensure e2e tests exist for the merged feature in apps/frontend/e2e and are passing. Do not report the task complete until both are done.\"}}'; exit 0",
+            "statusMessage": "Post-merge: roadmap + e2e reminder"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__github__merge_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"PROJECT RULE (post-merge): a PR was just merged. Before this task is done you MUST (1) update ROADMAP.md to reflect what shipped, and (2) ensure e2e tests exist for the merged feature in apps/frontend/e2e and are passing. Do not report the task complete until both are done.\"}}'",
+            "statusMessage": "Post-merge: roadmap + e2e reminder"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(*)",
@@ -14,5 +36,3 @@
     ]
   }
 }
-
-

@@ -5,4 +5,7 @@
     <Project Path="src/Medika.Domain/Medika.Domain.csproj" />
     <Project Path="src/Medika.Infrastructure/Medika.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Medika.Tests/Medika.Tests.csproj" />
+  </Folder>
 </Solution>
