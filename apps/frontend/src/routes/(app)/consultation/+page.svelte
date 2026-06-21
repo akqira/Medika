@@ -9,6 +9,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Combobox from '$lib/components/Combobox.svelte';
 	import QuickAddPatientModal from '$lib/components/QuickAddPatientModal.svelte';
+	import { expandPosology } from '$lib/posology';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -273,6 +274,7 @@
 						<span></span>
 					</div>
 					{#each medications as med}
+						{@const posoHint = expandPosology(med.dosage)}
 						<div class="ord-grid">
 							<Combobox
 								value={med.medication}
@@ -281,10 +283,17 @@
 								onInput={(v) => updateMed(med.id, 'medication', v)}
 								style="width:100%;min-width:0"
 							/>
-							<input
-								value={med.dosage}
-								oninput={(e) => updateMed(med.id, 'dosage', (e.target as HTMLInputElement).value)}
-								class="mk-input" style="min-width:0" placeholder="1 cp matin et soir" title="Posologie — texte libre" />
+							<div style="min-width:0">
+								<input
+									value={med.dosage}
+									oninput={(e) => updateMed(med.id, 'dosage', (e.target as HTMLInputElement).value)}
+									onblur={() => { const x = expandPosology(med.dosage); if (x) updateMed(med.id, 'dosage', x); }}
+									class="mk-input" style="width:100%;min-width:0" placeholder="1-0-1-0 ou texte libre"
+									title="Posologie — tapez 1-0-1-0 (matin-midi-soir-coucher) ou du texte libre" />
+								{#if posoHint && posoHint !== med.dosage}
+									<div style="font-size:10.5px;color:var(--primary);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title={posoHint}>= {posoHint}</div>
+								{/if}
+							</div>
 							<input
 								value={med.duration}
 								oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}

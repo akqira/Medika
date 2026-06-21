@@ -56,13 +56,34 @@ test.describe('Consultation — ordonnance posologie', () => {
 	test('posologie is a visible free-text input on a medication line', async ({ page }) => {
 		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
 
-		const posologie = page.getByPlaceholder('1 cp matin et soir');
+		const posologie = page.getByPlaceholder('1-0-1-0 ou texte libre');
 		await expect(posologie).toBeVisible();
-		await posologie.fill('1 comprimé matin et soir');
-		await expect(posologie).toHaveValue('1 comprimé matin et soir');
+		await posologie.fill('1 comprimé au besoin');
+		await expect(posologie).toHaveValue('1 comprimé au besoin');
 
 		// Column header is "Posologie"; the old ambiguous "Prise" header is gone.
 		await expect(page.getByText('Posologie', { exact: true })).toBeVisible();
 		await expect(page.getByText('Prise', { exact: true })).toHaveCount(0);
+	});
+
+	test('a 1-0-1-0 pattern expands to readable moments on blur', async ({ page }) => {
+		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
+
+		const posologie = page.getByPlaceholder('1-0-1-0 ou texte libre');
+		await posologie.fill('1-0-1-0');
+		// Live hint previews the expansion before committing.
+		await expect(page.getByText('= 1 matin, 1 soir')).toBeVisible();
+		// Blur normalises the shortcut in place (matin-midi-soir-coucher).
+		await posologie.blur();
+		await expect(posologie).toHaveValue('1 matin, 1 soir');
+	});
+
+	test('free-text posology is left untouched (shortcut is additive)', async ({ page }) => {
+		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
+
+		const posologie = page.getByPlaceholder('1-0-1-0 ou texte libre');
+		await posologie.fill('1 cp au besoin');
+		await posologie.blur();
+		await expect(posologie).toHaveValue('1 cp au besoin');
 	});
 });
