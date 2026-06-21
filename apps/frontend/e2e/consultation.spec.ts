@@ -43,3 +43,26 @@ test.describe('Consultation — save failures', () => {
 		await expect(page.getByText('Aucun médicament')).toBeVisible();
 	});
 });
+
+// Ordonnance — posologie is a free-text field (the ambiguous "Prise"/"Fréquence"
+// column was dropped; dosage/posologie is now directly enterable, no longer hidden).
+test.describe('Consultation — ordonnance posologie', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+		await page.goto('/consultation');
+		await expect(page.getByRole('heading', { name: 'Nouvelle consultation' })).toBeVisible();
+	});
+
+	test('posologie is a visible free-text input on a medication line', async ({ page }) => {
+		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
+
+		const posologie = page.getByPlaceholder('1 cp matin et soir');
+		await expect(posologie).toBeVisible();
+		await posologie.fill('1 comprimé matin et soir');
+		await expect(posologie).toHaveValue('1 comprimé matin et soir');
+
+		// Column header is "Posologie"; the old ambiguous "Prise" header is gone.
+		await expect(page.getByText('Posologie', { exact: true })).toBeVisible();
+		await expect(page.getByText('Prise', { exact: true })).toHaveCount(0);
+	});
+});

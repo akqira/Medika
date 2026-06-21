@@ -89,7 +89,7 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 
 ---
 
-## Phase 3 · Consultation & Ordonnance — ergonomie de saisie ⬜
+## Phase 3 · Consultation & Ordonnance — ergonomie de saisie ✅ (format 1-0-1 reporté)
 > Principe directeur : le médecin écrit **vite**, peu de clics, peu d'allers-retours clavier/souris.
 
 - ✅ **Dropdown patient** : se compacte en barre fine (avatar + nom + « Changer ») une fois le patient sélectionné.
@@ -97,8 +97,8 @@ L'app n'est plus au stade « rien à montrer ». Sont en place et **vérifiés**
 - ✅ Anamnèse / Examen : OK.
 - **Ordonnance** :
   - ✅ **Liste de médicaments** auto-complétée sur la nomenclature (`/medicaments.json`) + ajout libre (« … sera utilisé tel quel »).
-  - 🟡 **Posologie / dosage** : le champ `dosage` existe dans le modèle mais est **caché dans l'UI** (`type="hidden"`) → aucun moyen de le saisir. **À corriger** (gap fonctionnel réel).
-  - ⬜ Champ **« Prise »** : encore en texte libre (placeholder « matin et soir… »). Le format bref **« 1-0-1 + durée »** reste à valider avec un médecin avant de structurer.
+  - ✅ **Posologie** : champ **texte libre visible** sur la ligne d'ordonnance (placeholder « 1 cp matin et soir »), affiché à côté du nom du médicament dans le dossier/PDF. Le champ `dosage` n'est plus caché. Couvert par un test e2e (`consultation.spec.ts`).
+  - ✅ Champ ambigu **« Prise » / « Fréquence » retiré** (« laisse tomber, c'est ambigus » — feedback Kader). Le format structuré **« 1-0-1 »** est **reporté** (décision : texte libre pour l'instant) — à réévaluer plus tard avec un médecin.
 
 ---
 
