@@ -72,10 +72,17 @@
 			<a href="/finance?year={next.year}&month={next.month}" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:7px;background:var(--surface);border:1px solid var(--border);text-decoration:none;color:var(--text-muted)">
 				<Icon name="chevronRight" size={15} />
 			</a>
+			<a
+				href="/actes"
+				style="display:flex;align-items:center;gap:7px;padding:9px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:13.5px;font-weight:600;text-decoration:none;margin-left:6px"
+			>
+				<Icon name="fileText" size={14} color="var(--text-muted)" />
+				Catalogue d'actes
+			</a>
 			<button
 				type="button"
 				onclick={() => showChargeForm = !showChargeForm}
-				style="display:flex;align-items:center;gap:7px;padding:9px 16px;background:var(--primary);color:white;border:none;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;margin-left:6px"
+				style="display:flex;align-items:center;gap:7px;padding:9px 16px;background:var(--primary);color:white;border:none;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer"
 			>
 				<Icon name="plus" size={14} color="white" />
 				Ajouter une charge

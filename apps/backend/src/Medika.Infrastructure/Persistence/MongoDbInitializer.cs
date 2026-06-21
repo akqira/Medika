@@ -18,6 +18,7 @@ public static class MongoDbInitializer
         await CreateConsultationIndexesAsync(ctx);
         await CreateInvoiceIndexesAsync(ctx);
         await CreateChargeIndexesAsync(ctx);
+        await CreateActIndexesAsync(ctx);
         await CreateUserIndexesAsync(ctx);
         await CreateAuditLogIndexesAsync(ctx);
         await BackfillCabinetIdAsync(ctx);
@@ -170,6 +171,18 @@ public static class MongoDbInitializer
                 builders.Ascending(c => c.DoctorId),
                 builders.Descending(c => c.Date))),
             new CreateIndexModel<Charge>(builders.Ascending(c => c.Category)),
+        ]);
+    }
+
+    private static async Task CreateActIndexesAsync(MongoContext ctx)
+    {
+        var col = ctx.Acts;
+        var builders = Builders<Act>.IndexKeys;
+        await col.Indexes.CreateManyAsync([
+            // cabinetId-first (multi-tenancy rule); name for a stable sorted catalogue.
+            new CreateIndexModel<Act>(builders.Combine(
+                builders.Ascending(a => a.CabinetId),
+                builders.Ascending(a => a.Name))),
         ]);
     }
 
