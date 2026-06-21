@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ url }) => ({
 });
 
 export const actions: Actions = {
-	default: async ({ request }) => {
+	default: async ({ request, getClientAddress }) => {
 		const data = await request.formData();
 		const email = data.get('email')?.toString() ?? '';
 		const token = data.get('token')?.toString() ?? '';
@@ -21,12 +21,15 @@ export const actions: Actions = {
 		if (newPassword !== confirmPassword)
 			return fail(400, { error: 'Les mots de passe ne correspondent pas.' });
 
+		let clientIp: string | undefined;
+		try { clientIp = getClientAddress(); } catch { /* unavailable → backend throttle falls back */ }
+
 		try {
 			const res = await api.post<{ message: string }>('/api/auth/reset-password', {
 				email,
 				token,
 				newPassword
-			});
+			}, undefined, clientIp);
 			return { success: true, message: res.message };
 		} catch (err) {
 			if (isRedirect(err)) throw err;

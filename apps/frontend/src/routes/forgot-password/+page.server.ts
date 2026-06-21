@@ -3,14 +3,17 @@ import { api } from '$lib/server/api';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request }) => {
+	default: async ({ request, getClientAddress }) => {
 		const data = await request.formData();
 		const email = data.get('email')?.toString().trim() ?? '';
 
 		if (!email) return fail(400, { error: 'Adresse e-mail requise.', email });
 
+		let clientIp: string | undefined;
+		try { clientIp = getClientAddress(); } catch { /* unavailable → backend throttle falls back */ }
+
 		try {
-			const res = await api.post<{ message: string }>('/api/auth/forgot-password', { email });
+			const res = await api.post<{ message: string }>('/api/auth/forgot-password', { email }, undefined, clientIp);
 			// The backend always returns the same generic message (no account enumeration).
 			return { success: true, message: res.message };
 		} catch (err) {

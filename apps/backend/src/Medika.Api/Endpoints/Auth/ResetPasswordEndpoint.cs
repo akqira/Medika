@@ -22,8 +22,10 @@ public class ResetPasswordEndpoint : Endpoint<ResetPasswordCommand, ResetPasswor
     {
         Post("/api/auth/reset-password");
         AllowAnonymous();
+        // Per-end-user throttle: keyed on the client IP the BFF forwards as X-Client-IP
+        // (X-Forwarded-For is overwritten by the host with the BFF's own IP).
         if (!Resolve<IHostEnvironment>().IsDevelopment())
-            Throttle(hitLimit: 5, durationSeconds: 60);
+            Throttle(hitLimit: 5, durationSeconds: 60, headerName: "X-Client-IP");
         Summary(s => s.Summary = "Set a new password using a valid reset token");
     }
 

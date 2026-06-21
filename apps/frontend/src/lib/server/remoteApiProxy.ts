@@ -29,10 +29,13 @@ export class RemoteApi {
    * Shared helper: applies security headers and returns the raw fetch Response.
    * The body stream is NOT consumed here, so callers choose how to read it.
    */
-  private static async buildAndFetch(args: { url: string; options: RequestInit; token?: string }): Promise<{ response: Response; fullUrl: string }> {
+  private static async buildAndFetch(args: { url: string; options: RequestInit; token?: string; clientIp?: string }): Promise<{ response: Response; fullUrl: string }> {
     const headers: Record<string, string> = {
       "X-API-KEY": env.API_SECRET ?? "",
       "X-Request-Timestamp": new Date().toISOString(),
+      // End-user IP for per-client backend throttling. A custom header (not
+      // X-Forwarded-For, which Azure App Service overwrites with the BFF's IP).
+      ...(args.clientIp ? { "X-Client-IP": args.clientIp } : {}),
       ...(args.options.body !== undefined && !(args.options.body instanceof FormData) ? { "Content-Type": "application/json; charset=utf-8" } : {}),
       ...(args.token ? { Authorization: `Bearer ${args.token}` } : {}),
       ...(args.options.headers as Record<string, string>),
@@ -51,12 +54,13 @@ export class RemoteApi {
   /**
    * Standard JSON API calls. Maps auth failures to SvelteKit redirects/errors.
    */
-  static async fetchThenRetrieveJson<T>(args: { url: string; options?: RequestInit; token?: string }): Promise<T> {
+  static async fetchThenRetrieveJson<T>(args: { url: string; options?: RequestInit; token?: string; clientIp?: string }): Promise<T> {
     try {
       const { response, fullUrl } = await RemoteApi.buildAndFetch({
         url: args.url,
         options: args.options ?? {},
         token: args.token,
+        clientIp: args.clientIp,
       });
 
       if (response.status === 401) {
