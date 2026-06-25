@@ -13,7 +13,7 @@ public class GetPatientInvoicesEndpoint : Endpoint<GetPatientInvoicesRequest, Li
     public override void Configure()
     {
         Get("/api/patients/{id}/invoices");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Finance.ViewInvoices);
     }
 
     public override async Task<List<PatientInvoiceDto>> ExecuteAsync(GetPatientInvoicesRequest req, CancellationToken ct)

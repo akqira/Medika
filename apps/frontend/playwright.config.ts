@@ -35,15 +35,21 @@ export default defineConfig({
   // so each route compiles + hydrates once before it's driven; keep one retry as
   // a safety net for any residual timing blip.
   workers: 1,
-  retries: 1,
-  // Auth round-trips (login → backend → redirect) and SSR loads can be slow on a
-  // cold dev server. Give web-first assertions (toHaveURL, toBeVisible, …) more
-  // room than the 5s default so they wait for the page instead of racing it.
-  expect: { timeout: 15000 },
+  retries: 2,
+  // Auth round-trips (login → backend → redirect) and SSR loads are slow on a COLD
+  // dev server: the FIRST specs pay Vite's on-demand compilation of the login action +
+  // (app) layout + dashboard, which was clocking ~17s and just overran the old 15s
+  // timeout (stuck on /login → toHaveURL fails). Serialised workers alone don't help —
+  // the first spec always eats the cold cost — so give web-first assertions and
+  // navigation enough room to absorb the compile, plus an extra retry.
+  expect: { timeout: 30000 },
   // HTML report + concise console list, so every run is visualisable after the fact.
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'https://localhost:5000',
+    // Cold-compile headroom for navigations/actions (see retries/expect note above).
+    navigationTimeout: 30000,
+    actionTimeout: 20000,
     // The frontend dev server uses a self-signed local cert (apps/frontend/.cert).
     ignoreHTTPSErrors: true,
     // Capture everything — these power the trace viewer / UI mode time-travel.

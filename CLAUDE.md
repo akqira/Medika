@@ -61,6 +61,24 @@ Always capture and log the real error — never `catch {}` or `catch (e) { /* sw
 }
 ```
 
+### Verifying before you push (non-negotiable)
+
+Static checks (`pnpm check`, `dotnet build`, unit tests) do **not** catch runtime
+locator/selector problems or cross-page regressions. CI is a **backstop, not** your
+verification step. Before pushing a branch:
+
+- **If your diff adds or changes a Playwright spec, RUN that spec locally** — start both
+  apps and run it (see the E2E section). A written-but-unrun spec is unverified. Type-checks
+  cannot see that `getByLabel('Nom')` also matches `'Prénom'`, or that a locator resolves to
+  two elements.
+- **If you touch a shared surface** (the `(app)` layout/nav, `app.css`, a `$lib/components`
+  widget), grep for its other consumers and re-run the specs that exercise them. A global
+  element can collide with a per-page element of the same **accessible name/role** and break
+  unrelated specs (e.g. the navbar search vs. the patients-page search).
+- **Check the baseline.** When branching off `dev`, confirm dev's own e2e is green
+  (`gh run list --branch dev --workflow e2e.yml`). Don't build on a red baseline, attribute
+  the red to yourself, or miss that you must fix it.
+
 ---
 
 ## Commands

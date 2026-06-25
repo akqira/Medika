@@ -8,7 +8,7 @@ public class GetFinancialSummaryEndpoint : Endpoint<FinancialSummaryRequest, Fin
     public override void Configure()
     {
         Get("/api/finance/summary");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Finance.ViewSummary);
     }
 
     public override async Task<FinancialSummary> ExecuteAsync(FinancialSummaryRequest req, CancellationToken ct)

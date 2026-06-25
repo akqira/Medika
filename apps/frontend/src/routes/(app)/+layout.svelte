@@ -4,8 +4,14 @@
 	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
 	import Icon from '$lib/components/Icon.svelte';
+	import { PERMISSIONS, can } from '$lib/permissions';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+	const perms = $derived(data.user.permissions ?? []);
+	const canSeePatients = $derived(can(perms, PERMISSIONS.patients.view));
+	const canSeeConsultation = $derived(can(perms, PERMISSIONS.consultations.manage));
+	const canSeeTeam = $derived(can(perms, PERMISSIONS.users.view));
 
 	// Issue #54 — global navbar search: Enter sends the term to the Patients page,
 	// which already filters from ?term= (patients-only; global search tracked separately).
@@ -18,13 +24,27 @@
 		goto(term ? `/patients?term=${encodeURIComponent(term)}` : '/patients');
 	}
 
-	const NAV = [
-		{ href: '/dashboard',    label: 'Tableau de bord', icon: 'dashboard' },
-		{ href: '/schedule',     label: 'Agenda',          icon: 'calendar' },
-		{ href: '/patients',     label: 'Patients',        icon: 'users' },
-		{ href: '/consultation', label: 'Consultations',   icon: 'clipboard' },
-		{ href: '/finance',      label: 'Finances',        icon: 'barchart' },
-	];
+	// Each link declares the permission required to see it (null = always visible).
+	// A Doctor (admin) holds every permission, so the full nav shows for them; a Secretary
+	// sees only the sections their customised permission set grants.
+	const NAV = $derived(
+		[
+			{ href: '/dashboard',    label: 'Tableau de bord', icon: 'dashboard',  perm: null },
+			{ href: '/schedule',     label: 'Agenda',          icon: 'calendar',   perm: PERMISSIONS.scheduling.view },
+			{ href: '/patients',     label: 'Patients',        icon: 'users',      perm: PERMISSIONS.patients.view },
+			{ href: '/consultation', label: 'Consultations',   icon: 'clipboard',  perm: PERMISSIONS.consultations.manage },
+			{ href: '/finance',      label: 'Finances',        icon: 'barchart',   perm: PERMISSIONS.finance.viewSummary },
+			{ href: '/team',         label: 'Équipe',          icon: 'shieldCheck', perm: PERMISSIONS.users.view },
+		].filter((item) => item.perm === null || can(perms, item.perm))
+	);
+
+	const roleLabel = $derived(
+		data.user.role === 'Doctor'
+			? 'Médecin généraliste'
+			: data.user.role === 'Secretary'
+				? 'Secrétaire'
+				: data.user.role
+	);
 
 	const initials = $derived(
 		data.user.fullName.split(' ').map((n: string) => n[0] ?? '').join('').toUpperCase().slice(0, 2)
@@ -78,27 +98,31 @@
 
 	<!-- Right -->
 	<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-		<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.09);border-radius:7px;padding:6px 11px;width:200px;border:1px solid rgba(255,255,255,0.1)">
-			<Icon name="search" size={14} color="rgba(255,255,255,0.5)" />
-			<input
-				type="search"
-				bind:value={navSearch}
-				onkeydown={onNavSearch}
-				placeholder="Rechercher un patient…"
-				aria-label="Rechercher un patient"
-				style="background:transparent;border:none;outline:none;color:white;font-family:inherit;font-size:13px;width:100%"
-			/>
-		</div>
+		{#if canSeePatients}
+			<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.09);border-radius:7px;padding:6px 11px;width:200px;border:1px solid rgba(255,255,255,0.1)">
+				<Icon name="search" size={14} color="rgba(255,255,255,0.5)" />
+				<input
+					type="search"
+					bind:value={navSearch}
+					onkeydown={onNavSearch}
+					placeholder="Rechercher un patient…"
+					aria-label="Recherche rapide de patients"
+					style="background:transparent;border:none;outline:none;color:white;font-family:inherit;font-size:13px;width:100%"
+				/>
+			</div>
+		{/if}
 
 		<button style="position:relative;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(255,255,255,0.8);cursor:pointer;padding:7px 8px;display:flex;align-items:center">
 			<Icon name="bell" size={17} />
 			<span style="position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#F59E0B;border:1.5px solid var(--nav-bg)"></span>
 		</button>
 
-		<a href="/consultation" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;background:var(--accent);color:white;text-decoration:none;font-size:13px;font-weight:500">
-			<Icon name="plus" size={14} color="white" />
-			Consultation
-		</a>
+		{#if canSeeConsultation}
+			<a href="/consultation" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;background:var(--accent);color:white;text-decoration:none;font-size:13px;font-weight:500">
+				<Icon name="plus" size={14} color="white" />
+				Consultation
+			</a>
+		{/if}
 
 		<!-- User dropdown -->
 		<div style="position:relative">
@@ -111,7 +135,7 @@
 				</div>
 				<div style="text-align:left">
 					<div style="font-size:12.5px;font-weight:600;line-height:1.2">{data.user.fullName}</div>
-					<div style="font-size:11px;opacity:0.55">{data.user.role === 'Doctor' ? 'Généraliste' : data.user.role}</div>
+					<div style="font-size:11px;opacity:0.55">{data.user.role === 'Doctor' ? 'Généraliste' : roleLabel}</div>
 				</div>
 				<Icon name="chevronDown" size={13} color="rgba(255,255,255,0.5)" />
 			</button>
@@ -129,7 +153,7 @@
 					<div style="padding:13px 16px;border-bottom:1px solid var(--border);background:var(--bg)">
 						<div style="font-size:13px;font-weight:600;color:var(--text)">{data.user.fullName}</div>
 						<div style="font-size:11.5px;color:var(--text-muted);margin-top:1px">
-							{data.user.role === 'Doctor' ? 'Médecin généraliste' : data.user.role}
+							{roleLabel}
 						</div>
 					</div>
 

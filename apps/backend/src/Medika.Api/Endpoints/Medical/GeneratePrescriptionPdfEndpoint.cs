@@ -29,7 +29,7 @@ public class GeneratePrescriptionPdfEndpoint : Endpoint<GeneratePrescriptionPdfR
     public override void Configure()
     {
         Get("/api/patients/{id}/consultations/{consultationId}/ordonnance");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Consultations.Prescribe);
     }
 
     public override async Task HandleAsync(GeneratePrescriptionPdfRequest req, CancellationToken ct)

@@ -8,7 +8,7 @@ public class GetActsEndpoint : EndpointWithoutRequest<ActsResult>
     public override void Configure()
     {
         Get("/api/acts");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Finance.ViewInvoices);
     }
 
     public override async Task HandleAsync(CancellationToken ct)

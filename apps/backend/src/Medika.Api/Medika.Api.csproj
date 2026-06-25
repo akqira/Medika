@@ -19,6 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Permission constants are referenced by every endpoint's ACL guard. -->
+    <Using Include="Medika.Application.Authorization" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Medika.Application\Medika.Application.csproj" />
     <ProjectReference Include="..\Medika.Infrastructure\Medika.Infrastructure.csproj" />
   </ItemGroup>

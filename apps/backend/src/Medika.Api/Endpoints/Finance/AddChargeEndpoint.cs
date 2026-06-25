@@ -36,7 +36,7 @@ public class AddChargeEndpoint : Endpoint<AddChargeRequest, AddChargeResponse>
     public override void Configure()
     {
         Post("/api/charges");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Finance.ManageCharges);
     }
 
     public override async Task HandleAsync(AddChargeRequest req, CancellationToken ct)

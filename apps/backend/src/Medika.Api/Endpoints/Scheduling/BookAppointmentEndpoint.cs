@@ -8,7 +8,7 @@ public class BookAppointmentEndpoint : Endpoint<BookAppointmentCommand, BookedRe
     public override void Configure()
     {
         Post("/api/appointments");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Scheduling.Manage);
     }
 
     public override async Task HandleAsync(BookAppointmentCommand req, CancellationToken ct)

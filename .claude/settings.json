@@ -1,5 +1,18 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash .claude/hooks/verify-before-push.sh",
+            "statusMessage": "Verify-before-push check"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

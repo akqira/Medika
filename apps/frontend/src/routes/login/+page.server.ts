@@ -26,10 +26,15 @@ export const actions: Actions = {
 				userId: string;
 				role: string;
 				fullName: string;
+				permissions: string[];
 			}>('/api/auth/login', { email, password }, undefined, clientIp);
 
 			setToken(cookies, result.token);
-			setUser(cookies, { fullName: result.fullName, role: result.role });
+			setUser(cookies, {
+				fullName: result.fullName,
+				role: result.role,
+				permissions: result.permissions ?? []
+			});
 		} catch (err) {
 			if (isRedirect(err)) throw err; // never swallow a redirect
 

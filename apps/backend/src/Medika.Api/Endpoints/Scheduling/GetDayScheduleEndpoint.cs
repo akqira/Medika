@@ -8,7 +8,7 @@ public class GetDayScheduleEndpoint : Endpoint<GetDayScheduleRequest, IReadOnlyL
     public override void Configure()
     {
         Get("/api/schedule/{date}");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Scheduling.View);
     }
 
     public override async Task<IReadOnlyList<AppointmentSlot>> ExecuteAsync(GetDayScheduleRequest req, CancellationToken ct)

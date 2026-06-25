@@ -22,6 +22,21 @@ public static class MongoDbInitializer
         await CreateUserIndexesAsync(ctx);
         await CreateAuditLogIndexesAsync(ctx);
         await BackfillCabinetIdAsync(ctx);
+        await BackfillRoleRenameAsync(ctx);
+    }
+
+    /// <summary>
+    /// Idempotent rename of the staff role string "Receptionist" → "Secretary" (issue #24).
+    /// Enums serialize as strings, so any pre-rename document would otherwise fail to deserialize.
+    /// Safe to run on every startup — matched count is 0 once migrated.
+    /// </summary>
+    private static async Task BackfillRoleRenameAsync(MongoContext ctx)
+    {
+        var result = await ctx.Users.UpdateManyAsync(
+            new BsonDocument("role", "Receptionist"),
+            new BsonDocument("$set", new BsonDocument("role", "Secretary")));
+        if (result.ModifiedCount > 0)
+            Console.WriteLine($"[RoleRename] Renamed Receptionist → Secretary on {result.ModifiedCount} user(s).");
     }
 
     public static async Task SeedAsync(MongoContext ctx)

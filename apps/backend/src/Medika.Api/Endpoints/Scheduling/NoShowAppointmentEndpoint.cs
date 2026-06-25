@@ -8,7 +8,7 @@ public class NoShowAppointmentEndpoint : EndpointWithoutRequest<AppointmentStatu
     public override void Configure()
     {
         Patch("/api/appointments/{id}/no-show");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Scheduling.Manage);
     }
 
     public override async Task HandleAsync(CancellationToken ct)

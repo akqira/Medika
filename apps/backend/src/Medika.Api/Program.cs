@@ -113,6 +113,9 @@ app.UseFastEndpoints(c =>
 {
     c.Errors.UseProblemDetails();
     c.Serializer.Options.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    // Endpoints gate access with Permissions(...) — the JWT carries one "permissions" claim
+    // per granted permission (Doctor → all; staff → their customisable set). Issue #24.
+    c.Security.PermissionsClaimType = "permissions";
 }).UseSwaggerGen();
 
 app.Run();
