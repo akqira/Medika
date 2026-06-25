@@ -30,6 +30,9 @@ jobs:
       - name: Type-check
         run: pnpm --filter frontend check
 
+      - name: Unit tests
+        run: pnpm --filter frontend test
+
       - name: Build
         run: pnpm --filter frontend build
         env:
