@@ -1,0 +1,195 @@
+name: Autopilot — Build
+
+# Triggered when an issue enters "In Progress" (gets the status:in-progress label).
+# Runs Claude Code headless to clarify → test → implement → validate → open a PR,
+# then captures a screenshot of the feature and emails Kader a summary.
+#
+# It NEVER merges. Kader reviews and merges every PR. See docs/setup/autopilot.md.
+
+on:
+  issues:
+    types: [labeled]
+
+# One run per issue at a time; a re-label won't stack concurrent builds.
+concurrency:
+  group: autopilot-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    # Only proceed for the status:in-progress label. Keeps the rest of the matrix cheap.
+    if: github.event.label.name == 'status:in-progress'
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+    steps:
+      - id: check
+        name: Verify required secrets are present
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is missing — add it in Settings → Secrets → Actions."
+            exit 1
+          fi
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: guard
+    if: needs.guard.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Ephemeral CI stack config (mirrors e2e.yml so the screenshot step matches).
+      ApiSettings__ApiKey: ci-autopilot-api-key
+      Jwt__Secret: ci-autopilot-jwt-secret-must-be-at-least-32-bytes-0123456789
+      MongoDB__ConnectionString: mongodb://localhost:27017
+      MongoDB__DatabaseName: medika_autopilot
+      ASPNETCORE_ENVIRONMENT: Development
+      API_URL: http://localhost:8000
+      API_SECRET: ci-autopilot-api-key
+      E2E_BASE_URL: http://localhost:5000
+      E2E_EMAIL: kader.kebir@gmail.com
+      E2E_PASSWORD: Doctor@123
+      CI: 'true'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Configure git + gh
+        run: |
+          git config user.name "medika-autopilot[bot]"
+          git config user.email "autopilot@medika.local"
+          echo "${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Install frontend deps
+        run: pnpm --filter frontend install
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run autopilot build agent
+        id: agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          REPO: ${{ github.repository }}
+        run: |
+          PROMPT="$(cat .github/autopilot/build-prompt.md)
+
+          ---
+          ISSUE_NUMBER: ${ISSUE_NUMBER}
+          ISSUE_TITLE: ${ISSUE_TITLE}
+          REPO: ${REPO}
+
+          ISSUE_BODY:
+          ${ISSUE_BODY}
+          "
+          # Headless, non-interactive, with the tools the agent needs. The agent
+          # writes autopilot-result.json which the later steps read.
+          claude -p "$PROMPT" \
+            --permission-mode acceptEdits \
+            --allowedTools "Edit,Write,Read,Glob,Grep,Bash" \
+            --max-turns 120 || echo "::warning::Claude exited non-zero; checking result file."
+
+      - name: Parse agent result
+        id: result
+        run: |
+          if [ ! -f autopilot-result.json ]; then
+            echo "::error::Agent produced no autopilot-result.json"
+            echo '{"status":"error","summary":"Agent did not emit a result file."}' > autopilot-result.json
+          fi
+          cat autopilot-result.json
+          echo "status=$(jq -r '.status' autopilot-result.json)" >> "$GITHUB_OUTPUT"
+          echo "branch=$(jq -r '.branch // empty' autopilot-result.json)" >> "$GITHUB_OUTPUT"
+          echo "route=$(jq -r '.screenshotRoute // empty' autopilot-result.json)" >> "$GITHUB_OUTPUT"
+
+      # ---- Screenshot (only when a PR was opened and a route was given) ----
+      - name: Install Playwright browser
+        if: steps.result.outputs.status == 'pr_opened' && steps.result.outputs.route != ''
+        run: pnpm --filter frontend exec playwright install --with-deps chromium
+
+      - name: Check out the feature branch
+        if: steps.result.outputs.status == 'pr_opened' && steps.result.outputs.route != ''
+        run: |
+          git fetch origin "${{ steps.result.outputs.branch }}"
+          git checkout "${{ steps.result.outputs.branch }}"
+          pnpm --filter frontend install
+
+      - name: Boot stack + capture screenshot
+        if: steps.result.outputs.status == 'pr_opened' && steps.result.outputs.route != ''
+        env:
+          SHOT_ROUTE: ${{ steps.result.outputs.route }}
+        run: |
+          nohup dotnet run --project apps/backend/src/Medika.Api/Medika.Api.csproj \
+            --no-launch-profile --urls http://localhost:8000 > backend.log 2>&1 &
+          for i in $(seq 1 90); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/patients || echo 000)
+            [ "$code" != "000" ] && break || sleep 2
+          done
+          nohup pnpm --filter frontend dev > frontend.log 2>&1 &
+          for i in $(seq 1 90); do
+            curl -sf -o /dev/null http://localhost:5000/login && break || sleep 2
+          done
+          node .github/autopilot/screenshot.mjs || echo "::warning::Screenshot failed; email will go without it."
+
+      - name: Upload screenshot artifact
+        if: ${{ !cancelled() && steps.result.outputs.status == 'pr_opened' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: autopilot-screenshot
+          path: feature-screenshot.png
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # ---- Notify (always, with whatever status the agent reported) ----
+      - name: Notify Kader (Brevo email + issue comment)
+        if: ${{ !cancelled() }}
+        env:
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_FROM_EMAIL: ${{ secrets.BREVO_FROM_EMAIL }}
+          NOTIFY_TO: kader.kebir@gmail.com
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: node .github/autopilot/notify.mjs
+
+      - name: Dump logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "===== backend.log ====="; tail -n 100 backend.log 2>/dev/null || true
+          echo "===== frontend.log ====="; tail -n 100 frontend.log 2>/dev/null || true
