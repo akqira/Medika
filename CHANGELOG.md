@@ -5,3 +5,4 @@ All notable changes to Medika are documented here. Format follows
 entries under **[Unreleased]** as PRs merge into `dev`.
 
 ## [Unreleased]
+- feat(navbar): wire global search to the patients page (#54) (#65, closes #54)
