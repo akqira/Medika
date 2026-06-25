@@ -1,45 +1,43 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers';
 
-// Issue #54 — the navbar global search must stop being decorative: typing a term
-// and pressing Enter navigates to the Patients page pre-filtered (/patients?term=).
-// Patients-only scope (truly-global search is tracked separately).
+// Issue #54 (revised) — the navbar global search is a live patient autocomplete:
+// typing (debounced, min 2 chars) shows a dropdown of matching patients directly
+// under the input; selecting a row opens that patient's file (/patients/[id]).
+// It must NOT navigate to the full patients list on Enter (the earlier, wrong
+// contract). Patients-only scope (truly-global search is tracked separately).
 //
-// Failing-path-first: before wiring, the input did nothing on Enter. These assert
-// the navigation contract. Non-mutating, data-independent.
+// Data-independent / non-mutating: uses the min-chars hint and a nonsense query,
+// and asserts the no-navigation contract — no seeded patient required.
 
 const NAV_SEARCH = 'Rechercher un patient…'; // exact navbar placeholder
 
 test.describe('Navbar global search', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
-		// Start on a non-Patients page so only the navbar input matches the placeholder.
+		// Stay off /patients so only the navbar input carries this placeholder.
 		await page.goto('/dashboard');
 		await expect(page.getByPlaceholder(NAV_SEARCH)).toBeVisible();
 	});
 
-	test('Enter on a term navigates to the patients page pre-filtered', async ({ page }) => {
-		await page.getByPlaceholder(NAV_SEARCH).fill('Dupont');
-		await page.getByPlaceholder(NAV_SEARCH).press('Enter');
-
-		await page.waitForURL(/\/patients\?term=Dupont/);
-		// The Patients page search box reflects the carried-over term.
-		await expect(page.getByPlaceholder(/pour naviguer/)).toHaveValue('Dupont');
+	test('one character shows the min-length hint, not results', async ({ page }) => {
+		await page.getByPlaceholder(NAV_SEARCH).fill('a');
+		await expect(page.getByText('Tapez au moins 2 caractères…')).toBeVisible();
 	});
 
-	test('a term with spaces/diacritics is URL-encoded', async ({ page }) => {
-		await page.getByPlaceholder(NAV_SEARCH).fill('Élodie Martin');
-		await page.getByPlaceholder(NAV_SEARCH).press('Enter');
+	test('a nonsense term shows the empty dropdown and does NOT navigate', async ({ page }) => {
+		await page.getByPlaceholder(NAV_SEARCH).fill('zzzqqxnotapatient');
+		await expect(page.getByText('Aucun patient trouvé')).toBeVisible();
 
-		// Lands on patients with the encoded term; the page box shows the decoded value.
-		await page.waitForURL(/\/patients\?term=/);
-		await expect(page).toHaveURL(/term=%C3%89lodie(\+|%20)Martin/);
-		await expect(page.getByPlaceholder(/pour naviguer/)).toHaveValue('Élodie Martin');
+		// The old contract navigated to /patients?term= on Enter — it must not anymore.
+		await page.getByPlaceholder(NAV_SEARCH).press('Enter');
+		await expect(page).toHaveURL(/\/dashboard/);
 	});
 
-	test('Enter on an empty box goes to the patients list (no crash)', async ({ page }) => {
-		await page.getByPlaceholder(NAV_SEARCH).press('Enter');
-		await page.waitForURL(/\/patients/);
-		await expect(page.getByRole('heading', { name: 'Patients' })).toBeVisible();
+	test('Escape closes the dropdown', async ({ page }) => {
+		await page.getByPlaceholder(NAV_SEARCH).fill('zzzqqxnotapatient');
+		await expect(page.getByText('Aucun patient trouvé')).toBeVisible();
+		await page.getByPlaceholder(NAV_SEARCH).press('Escape');
+		await expect(page.getByText('Aucun patient trouvé')).not.toBeVisible();
 	});
 });
