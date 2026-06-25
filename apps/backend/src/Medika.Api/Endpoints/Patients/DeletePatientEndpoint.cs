@@ -8,7 +8,7 @@ public class DeletePatientEndpoint : Endpoint<DeletePatientCommand>
     public override void Configure()
     {
         Delete("/api/patients/{id}");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Patients.Delete);
     }
 
     public override async Task HandleAsync(DeletePatientCommand req, CancellationToken ct)

@@ -14,7 +14,7 @@ public class GetChargesEndpoint : Endpoint<GetChargesRequest, ChargesResult>
     public override void Configure()
     {
         Get("/api/charges");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Finance.ManageCharges);
     }
 
     public override async Task<ChargesResult> ExecuteAsync(GetChargesRequest req, CancellationToken ct)

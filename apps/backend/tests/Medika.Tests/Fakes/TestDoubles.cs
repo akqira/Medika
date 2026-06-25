@@ -1,7 +1,54 @@
 using Medika.Application.Common.Interfaces;
+using Medika.Domain.Identity;
 using Medika.Domain.Medical;
 
 namespace Medika.Tests.Fakes;
+
+/// <summary>In-memory <see cref="IUserRepository"/> for Identity handler unit tests.</summary>
+public sealed class FakeUserRepository : IUserRepository
+{
+    public List<User> Users { get; } = [];
+
+    public FakeUserRepository(params User[] seed) => Users.AddRange(seed);
+
+    public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
+        Task.FromResult(Users.FirstOrDefault(u => u.Email == email.ToLowerInvariant()));
+
+    public Task<bool> EmailExistsAsync(string email, CancellationToken ct = default) =>
+        Task.FromResult(Users.Any(u => u.Email == email.ToLowerInvariant()));
+
+    public Task<IReadOnlyList<User>> GetByCabinetAsync(string cabinetId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<User>>(Users.Where(u => u.CabinetId == cabinetId).ToList());
+
+    public Task<User?> GetByIdAsync(UserId id, CancellationToken ct = default) =>
+        Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+
+    public Task AddAsync(User aggregate, CancellationToken ct = default)
+    {
+        Users.Add(aggregate);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(User aggregate, CancellationToken ct = default)
+    {
+        var i = Users.FindIndex(u => u.Id == aggregate.Id);
+        if (i >= 0) Users[i] = aggregate;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(UserId id, CancellationToken ct = default)
+    {
+        Users.RemoveAll(u => u.Id == id);
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Deterministic password hasher for tests (never real bcrypt).</summary>
+public sealed class FakePasswordHasher : IPasswordHasher
+{
+    public string Hash(string password) => $"hashed:{password}";
+    public bool Verify(string password, string hash) => hash == $"hashed:{password}";
+}
 
 /// <summary>In-memory <see cref="ICurrentUserService"/> for handler unit tests.</summary>
 public sealed class FakeCurrentUserService : ICurrentUserService

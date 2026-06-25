@@ -41,10 +41,10 @@ public class GetPatientConsultationsHandlerTests
     }
 
     [Fact]
-    public async Task Receptionist_gets_metadata_only_no_clinical_fields()
+    public async Task Secretary_gets_metadata_only_no_clinical_fields()
     {
         var consult = ConsultationFactory.WithDiagnosis(Cabinet, Patient, diagnosis: "Grippe");
-        var handler = HandlerFor("Receptionist", consult);
+        var handler = HandlerFor("Secretary", consult);
 
         var result = await handler.ExecuteAsync(Query(), CancellationToken.None);
 
@@ -57,10 +57,10 @@ public class GetPatientConsultationsHandlerTests
     }
 
     [Fact]
-    public async Task Receptionist_payload_does_not_serialize_diagnosis_reason_or_tariff()
+    public async Task Secretary_payload_does_not_serialize_diagnosis_reason_or_tariff()
     {
         var consult = ConsultationFactory.WithDiagnosis(Cabinet, Patient, reason: "Douleur", diagnosis: "Migraine");
-        var handler = HandlerFor("Receptionist", consult);
+        var handler = HandlerFor("Secretary", consult);
 
         var result = await handler.ExecuteAsync(Query(), CancellationToken.None);
 

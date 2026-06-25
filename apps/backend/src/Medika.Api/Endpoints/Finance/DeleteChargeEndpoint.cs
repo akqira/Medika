@@ -8,7 +8,7 @@ public class DeleteChargeEndpoint : Endpoint<DeleteChargeCommand>
     public override void Configure()
     {
         Delete("/api/charges/{id}");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Finance.ManageCharges);
     }
 
     public override async Task HandleAsync(DeleteChargeCommand req, CancellationToken ct)

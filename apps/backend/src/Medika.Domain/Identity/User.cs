@@ -12,6 +12,12 @@ public sealed class User : AggregateRoot<UserId>
     public string LastName { get; private set; } = null!;
     public Role Role { get; private set; }
     public bool IsActive { get; private set; }
+
+    // Customizable per-user permission set (eGestion-style RBAC). Only meaningful for
+    // non-Doctor staff: a Doctor is the cabinet admin and implicitly holds every
+    // permission (see PermissionResolver), so nothing is stored for them.
+    private List<string> _permissions = [];
+    public IReadOnlyList<string> Permissions => _permissions.AsReadOnly();
     public DateTime CreatedAt { get; private init; }
     public DateTime UpdatedAt { get; private set; }
     public DateTime? LastLoginAt { get; private set; }
@@ -42,7 +48,8 @@ public sealed class User : AggregateRoot<UserId>
         Role role,
         string? specialty = null,
         string? orderNumber = null,
-        string? cabinetId = null)
+        string? cabinetId = null,
+        IEnumerable<string>? permissions = null)
     {
         var user = new User
         {
@@ -59,9 +66,24 @@ public sealed class User : AggregateRoot<UserId>
             UpdatedAt = DateTime.UtcNow,
             Specialty = specialty,
             OrderNumber = orderNumber,
+            // A Doctor's permissions are implicit (all) — only persist an explicit set for staff.
+            _permissions = role == Role.Doctor ? [] : (permissions?.Distinct().ToList() ?? []),
         };
         user.Raise(new UserCreated(user.Id, user.Email, user.Role));
         return user;
+    }
+
+    /// <summary>Replaces this user's customizable permission set (no-op semantics for a Doctor admin).</summary>
+    public void SetPermissions(IEnumerable<string> permissions)
+    {
+        _permissions = permissions?.Distinct().ToList() ?? [];
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Reactivate()
+    {
+        IsActive = true;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void RecordLogin() => LastLoginAt = DateTime.UtcNow;

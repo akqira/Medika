@@ -19,7 +19,7 @@ public class GetConsultationDetailEndpoint : Endpoint<GetConsultationDetailReque
     public override void Configure()
     {
         Get("/api/patients/{id}/consultations/{consultationId}");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Consultations.Manage);
     }
 
     public override async Task HandleAsync(GetConsultationDetailRequest req, CancellationToken ct)

@@ -8,7 +8,7 @@ public class MarkInvoicePaidEndpoint : Endpoint<MarkInvoicePaidCommand>
     public override void Configure()
     {
         Patch("/api/invoices/{InvoiceId}/pay");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Finance.ManageInvoices);
     }
 
     public override async Task HandleAsync(MarkInvoicePaidCommand req, CancellationToken ct)

@@ -15,4 +15,11 @@ public class UserRepository(MongoContext ctx)
         await Collection.CountDocumentsAsync(
             Builders<User>.Filter.Eq(u => u.Email, email.ToLowerInvariant()),
             cancellationToken: ct) > 0;
+
+    public async Task<IReadOnlyList<User>> GetByCabinetAsync(string cabinetId, CancellationToken ct = default) =>
+        await Collection
+            // cabinetId is ALWAYS the first filter clause (multi-tenancy rule).
+            .Find(Builders<User>.Filter.Eq(u => u.CabinetId, cabinetId))
+            .SortBy(u => u.LastName).ThenBy(u => u.FirstName)
+            .ToListAsync(ct);
 }

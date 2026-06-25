@@ -8,7 +8,7 @@ public class CreatePatientEndpoint : Endpoint<CreatePatientCommand, CreatedPatie
     public override void Configure()
     {
         Post("/api/patients");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Patients.Create);
     }
 
     public override async Task HandleAsync(CreatePatientCommand req, CancellationToken ct)

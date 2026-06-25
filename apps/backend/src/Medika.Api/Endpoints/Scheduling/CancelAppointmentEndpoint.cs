@@ -13,7 +13,7 @@ public class CancelAppointmentEndpoint : Endpoint<CancelAppointmentRequest, Canc
     public override void Configure()
     {
         Patch("/api/appointments/{id}/cancel");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Scheduling.Manage);
     }
 
     public override async Task HandleAsync(CancelAppointmentRequest req, CancellationToken ct)

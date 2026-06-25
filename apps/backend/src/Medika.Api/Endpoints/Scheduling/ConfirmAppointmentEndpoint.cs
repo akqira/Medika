@@ -8,7 +8,7 @@ public class ConfirmAppointmentEndpoint : EndpointWithoutRequest<AppointmentStat
     public override void Configure()
     {
         Patch("/api/appointments/{id}/confirm");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Scheduling.Manage);
     }
 
     public override async Task HandleAsync(CancellationToken ct)
