@@ -1,10 +1,22 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
 	import Icon from '$lib/components/Icon.svelte';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+	// Issue #54 — global navbar search: Enter sends the term to the Patients page,
+	// which already filters from ?term= (patients-only; global search tracked separately).
+	let navSearch = $state('');
+
+	function onNavSearch(e: KeyboardEvent) {
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		const term = navSearch.trim();
+		goto(term ? `/patients?term=${encodeURIComponent(term)}` : '/patients');
+	}
 
 	const NAV = [
 		{ href: '/dashboard',    label: 'Tableau de bord', icon: 'dashboard' },
@@ -68,7 +80,14 @@
 	<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
 		<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.09);border-radius:7px;padding:6px 11px;width:200px;border:1px solid rgba(255,255,255,0.1)">
 			<Icon name="search" size={14} color="rgba(255,255,255,0.5)" />
-			<input placeholder="Rechercher un patient…" style="background:transparent;border:none;outline:none;color:white;font-family:inherit;font-size:13px;width:100%" />
+			<input
+				type="search"
+				bind:value={navSearch}
+				onkeydown={onNavSearch}
+				placeholder="Rechercher un patient…"
+				aria-label="Rechercher un patient"
+				style="background:transparent;border:none;outline:none;color:white;font-family:inherit;font-size:13px;width:100%"
+			/>
 		</div>
 
 		<button style="position:relative;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(255,255,255,0.8);cursor:pointer;padding:7px 8px;display:flex;align-items:center">
