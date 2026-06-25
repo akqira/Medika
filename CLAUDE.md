@@ -78,6 +78,13 @@ verification step. Before pushing a branch:
 - **Check the baseline.** When branching off `dev`, confirm dev's own e2e is green
   (`gh run list --branch dev --workflow e2e.yml`). Don't build on a red baseline, attribute
   the red to yourself, or miss that you must fix it.
+- **UI/UX changes ship a validation screenshot in the PR.** After verifying the change
+  visually against the reference (browser/Playwright screenshot of the running app — or, for
+  non-page surfaces like an email template, the actual produced HTML), **post that screenshot
+  into the PR conversation**. Mechanism: commit it under `docs/ui-validation/` and embed it in a
+  PR comment via a commit-SHA-pinned `raw.githubusercontent.com` URL (survives branch deletion;
+  the repo is public). A UI/UX PR without its screenshot is not ready for review — and never
+  claim "verified / pixel-perfect" without showing the proof.
 
 ---
 
