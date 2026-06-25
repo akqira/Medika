@@ -1,0 +1,61 @@
+name: Autopilot — Post-merge sync
+
+# When a PR into dev is MERGED, sync GitHub state to match (the CLAUDE.md
+# post-merge rule): flip the linked issue's status label to status:done, move
+# its board card to Done, close it, and prepend a CHANGELOG entry.
+#
+# Only acts on PRs that close an issue (via "Closes #N" or a feature/<n>-* branch).
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev]
+
+jobs:
+  sync:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: dev
+          token: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Configure git
+        run: |
+          git config user.name "medika-autopilot[bot]"
+          git config user.email "autopilot@medika.local"
+
+      - name: Sync issue + board + changelog
+        env:
+          # Board moves need a PAT with `project` scope; GITHUB_TOKEN can't touch
+          # user-level Projects v2. Falls back to GITHUB_TOKEN (label/close still work).
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+          PROJECT_OWNER: akqira
+          PROJECT_NUMBER: '3'
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: node .github/autopilot/postmerge-sync.mjs
+
+      - name: Commit changelog if changed
+        run: |
+          if ! git diff --quiet CHANGELOG.md; then
+            git add CHANGELOG.md
+            git commit -m "docs(changelog): record PR #${{ github.event.pull_request.number }} [skip ci]"
+            git push origin dev
+          else
+            echo "No changelog change to commit."
+          fi
