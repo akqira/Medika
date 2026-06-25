@@ -44,7 +44,7 @@ test.describe('Team & roles — admin surface', () => {
 		await page.getByRole('button', { name: 'Ajouter un membre' }).click();
 
 		await page.getByLabel('Prénom').fill('Test');
-		await page.getByLabel('Nom').fill('Doublon');
+		await page.getByLabel('Nom', { exact: true }).fill('Doublon'); // exact: 'Nom' also matches 'Prénom'
 		await page.getByLabel('Email').fill(EMAIL); // the seeded doctor's email already exists
 		await page.getByLabel('Mot de passe provisoire').fill('Password@123');
 		await page.getByRole('button', { name: 'Créer le compte' }).click();

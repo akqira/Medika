@@ -106,7 +106,7 @@
 					bind:value={navSearch}
 					onkeydown={onNavSearch}
 					placeholder="Rechercher un patient…"
-					aria-label="Rechercher un patient"
+					aria-label="Recherche rapide de patients"
 					style="background:transparent;border:none;outline:none;color:white;font-family:inherit;font-size:13px;width:100%"
 				/>
 			</div>
