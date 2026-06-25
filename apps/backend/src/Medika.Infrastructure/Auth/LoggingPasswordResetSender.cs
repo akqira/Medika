@@ -13,7 +13,7 @@ public class LoggingPasswordResetSender(
     IConfiguration config,
     ILogger<LoggingPasswordResetSender> logger) : IPasswordResetSender
 {
-    public Task SendResetLinkAsync(string email, string rawToken, CancellationToken ct = default)
+    public Task SendResetLinkAsync(string email, string rawToken, string? displayName = null, CancellationToken ct = default)
     {
         var baseUrl = (config["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
         var link = $"{baseUrl}/reset-password?token={Uri.EscapeDataString(rawToken)}&email={Uri.EscapeDataString(email)}";

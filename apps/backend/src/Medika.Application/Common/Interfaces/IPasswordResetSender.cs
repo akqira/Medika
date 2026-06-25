@@ -6,5 +6,11 @@ namespace Medika.Application.Common.Interfaces;
 /// </summary>
 public interface IPasswordResetSender
 {
-    Task SendResetLinkAsync(string email, string rawToken, CancellationToken ct = default);
+    /// <param name="email">Recipient address (also encoded into the reset link).</param>
+    /// <param name="rawToken">The single-use reset token.</param>
+    /// <param name="displayName">
+    /// The recipient's display name for a personalised greeting (e.g. "Dr. Kader Kebir").
+    /// When null/blank the implementation falls back to a generic greeting.
+    /// </param>
+    Task SendResetLinkAsync(string email, string rawToken, string? displayName = null, CancellationToken ct = default);
 }
