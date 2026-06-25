@@ -61,7 +61,27 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
       - name: Deploy to Azure Web App (dev)
+        id: deploy
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'dev-medika-api'
           package: .
+
+      # Post-merge verification: a successful deploy ≠ a healthy app. Poll the
+      # unauthenticated /api/health probe (cold start can take a minute) and fail
+      # the run if the dev app never comes up — GitHub then notifies on the red run.
+      - name: Smoke-check deployed app health (dev)
+        shell: bash
+        env:
+          APP_URL: ${{ steps.deploy.outputs.webapp-url }}
+        run: |
+          base="${APP_URL%/}"
+          [ -z "$base" ] && base="https://dev-medika-api.azurewebsites.net"
+          url="$base/api/health"
+          echo "Post-deploy health check → $url"
+          for i in $(seq 1 12); do
+            code=$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 15 "$url" || echo 000)
+            if [ "$code" = "200" ]; then echo "Healthy (HTTP 200) on attempt $i"; exit 0; fi
+            echo "Attempt $i/12: HTTP $code — waiting for warm-up…"; sleep 15
+          done
+          echo "::error::$url did not return 200 within ~3 min after deploy"; exit 1
