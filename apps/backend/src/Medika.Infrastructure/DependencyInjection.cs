@@ -8,6 +8,7 @@ using Medika.Domain.Patients;
 using Medika.Domain.Scheduling;
 using Medika.Infrastructure.Audit;
 using Medika.Infrastructure.Auth;
+using Medika.Infrastructure.Email;
 using Medika.Infrastructure.Persistence;
 using Medika.Infrastructure.Pdf;
 using Medika.Infrastructure.Persistence.Mappings;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddMongoDB(config);
         services.AddAuth(config);
         services.AddStorage(config);
+        services.AddEmail(config);
         services.AddAudit();
         services.AddScoped<IPrescriptionPdfGenerator, PrescriptionPdfGenerator>();
 
@@ -63,9 +65,27 @@ public static class DependencyInjection
         services.AddSingleton(jwtSettings);
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddSingleton<IPasswordResetSender, LoggingPasswordResetSender>();
+        // Scoped (not singleton): it now depends on the transient typed-HttpClient
+        // IEmailService, so it must not outlive a request scope (avoids a captive HttpClient).
+        services.AddScoped<IPasswordResetSender, EmailPasswordResetSender>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+    }
+
+    private static void AddEmail(this IServiceCollection services, IConfiguration config)
+    {
+        var brevo = config.GetSection(BrevoSettings.Section).Get<BrevoSettings>() ?? new BrevoSettings();
+        services.AddSingleton(brevo);
+
+        // Typed HttpClient: BaseAddress + api-key header sourced from BrevoSettings.
+        // Brevo is the sole IEmailService provider; when unconfigured it no-ops (see BrevoEmailService).
+        services.AddHttpClient<IEmailService, BrevoEmailService>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<BrevoSettings>();
+            client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+            client.DefaultRequestHeaders.Add("api-key", settings.ApiKey);
+            client.DefaultRequestHeaders.Add("accept", "application/json");
+        });
     }
 
     private static void AddStorage(this IServiceCollection services, IConfiguration config)
