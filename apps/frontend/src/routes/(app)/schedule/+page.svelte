@@ -116,9 +116,9 @@
 		})
 	);
 
-	// Timeline: 08:00–20:00 (12h), fitted to the visible height so the whole day
+	// Timeline: 07:00–20:00 (13h), fitted to the visible height so the whole day
 	// shows at once without scrolling (falls back to scroll on very short screens).
-	const START_MIN = 8 * 60;
+	const START_MIN = 7 * 60;
 	const END_MIN   = 20 * 60;
 	const TOTAL_SLOTS = (END_MIN - START_MIN) / 30; // 24 demi-heures
 	const TOP_PAD = 14;
