@@ -124,11 +124,6 @@
 						</div>
 
 						<div>
-							<label for="cabinetCity" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Ville</label>
-							<input id="cabinetCity" name="cabinetCity" class="mk-input" value={data.profile.cabinetCity} placeholder="ex: Alger" />
-						</div>
-
-						<div>
 							<label for="cabinetWilaya" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Wilaya</label>
 							<select id="cabinetWilaya" name="cabinetWilaya" class="mk-input">
 								<option value="">— Choisir —</option>
