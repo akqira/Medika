@@ -274,11 +274,6 @@
 			</div>
 		{/if}
 
-		<button style="position:relative;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(255,255,255,0.8);cursor:pointer;padding:7px 8px;display:flex;align-items:center">
-			<Icon name="bell" size={17} />
-			<span style="position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#F59E0B;border:1.5px solid var(--nav-bg)"></span>
-		</button>
-
 		{#if canSeeConsultation}
 			<a href="/consultation" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;background:var(--accent);color:white;text-decoration:none;font-size:13px;font-weight:500">
 				<Icon name="plus" size={14} color="white" />
