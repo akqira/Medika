@@ -1,11 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { api } from '$lib/server/api';
-import { getToken } from '$lib/server/session';
+import { getToken, getUser } from '$lib/server/session';
 import type { PagedResult, PatientSummary, Act } from '$lib/types/api';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
 	const token = getToken(cookies)!;
+	const doctorName = getUser(cookies)?.fullName ?? '';
 
 	type ActItem = Omit<Act, 'id'> & { actId: string };
 	const [patients, acts] = await Promise.all([
@@ -21,7 +22,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 			.catch(() => [] as Act[])
 	]);
 
-	return { patients: patients.items, acts };
+	return { patients: patients.items, acts, doctorName };
 };
 
 export const actions: Actions = {
