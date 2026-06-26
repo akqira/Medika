@@ -7,6 +7,8 @@ const USER_COOKIE = 'medika_user';
 export interface SessionUser {
 	fullName: string;
 	role: string;
+	/** Effective permission strings (Doctor → all; Secretary → customisable set). */
+	permissions: string[];
 }
 
 export function getToken(cookies: Cookies): string | undefined {
@@ -31,7 +33,13 @@ export function getUser(cookies: Cookies): SessionUser | null {
 	const raw = cookies.get(USER_COOKIE);
 	if (!raw) return null;
 	try {
-		return JSON.parse(raw) as SessionUser;
+		const parsed = JSON.parse(raw) as Partial<SessionUser>;
+		return {
+			fullName: parsed.fullName ?? '',
+			role: parsed.role ?? '',
+			// Tokens issued before issue #24 lack permissions — default to none until re-login.
+			permissions: Array.isArray(parsed.permissions) ? parsed.permissions : []
+		};
 	} catch {
 		return null;
 	}

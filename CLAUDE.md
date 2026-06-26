@@ -61,6 +61,31 @@ Always capture and log the real error — never `catch {}` or `catch (e) { /* sw
 }
 ```
 
+### Verifying before you push (non-negotiable)
+
+Static checks (`pnpm check`, `dotnet build`, unit tests) do **not** catch runtime
+locator/selector problems or cross-page regressions. CI is a **backstop, not** your
+verification step. Before pushing a branch:
+
+- **If your diff adds or changes a Playwright spec, RUN that spec locally** — start both
+  apps and run it (see the E2E section). A written-but-unrun spec is unverified. Type-checks
+  cannot see that `getByLabel('Nom')` also matches `'Prénom'`, or that a locator resolves to
+  two elements.
+- **If you touch a shared surface** (the `(app)` layout/nav, `app.css`, a `$lib/components`
+  widget), grep for its other consumers and re-run the specs that exercise them. A global
+  element can collide with a per-page element of the same **accessible name/role** and break
+  unrelated specs (e.g. the navbar search vs. the patients-page search).
+- **Check the baseline.** When branching off `dev`, confirm dev's own e2e is green
+  (`gh run list --branch dev --workflow e2e.yml`). Don't build on a red baseline, attribute
+  the red to yourself, or miss that you must fix it.
+- **UI/UX changes ship a validation screenshot in the PR.** After verifying the change
+  visually against the reference (browser/Playwright screenshot of the running app — or, for
+  non-page surfaces like an email template, the actual produced HTML), **post that screenshot
+  into the PR conversation**. Mechanism: commit it under `docs/ui-validation/` and embed it in a
+  PR comment via a commit-SHA-pinned `raw.githubusercontent.com` URL (survives branch deletion;
+  the repo is public). A UI/UX PR without its screenshot is not ready for review — and never
+  claim "verified / pixel-perfect" without showing the proof.
+
 ---
 
 ## Commands
@@ -119,8 +144,12 @@ dotnet run --project apps/backend/src/Medika.Api
 
 Build the whole solution: `dotnet build apps/backend/Medika.slnx`
 
-The **backend** has no automated tests yet. The **frontend** has vitest unit tests and a
-Playwright E2E suite (`apps/frontend/e2e/`) — see the Frontend Commands section above.
+The **backend** has a small xUnit suite (`apps/backend/tests/Medika.Tests/`) — run with
+`dotnet test apps/backend/Medika.slnx`. It covers domain/handler logic (Finance, Medical,
+Patients), the HTTP-logging redaction middleware, and the Brevo email provider
+(`Infrastructure/BrevoEmailServiceTests.cs`, HTTP layer stubbed). The **frontend** has
+vitest unit tests and a Playwright E2E suite (`apps/frontend/e2e/`) — see the Frontend
+Commands section above.
 
 ---
 
@@ -141,7 +170,7 @@ Only `apps/frontend` is listed in `pnpm-workspace.yaml`.
 ```
 Medika.Domain/        Entities, value objects, domain events, repository interfaces
 Medika.Application/   CQRS commands/queries + handlers (FastEndpoints command bus — NOT MediatR), interfaces
-Medika.Infrastructure/ MongoDB repos, JWT, Cloudflare R2 storage, audit
+Medika.Infrastructure/ MongoDB repos, JWT, Cloudflare R2 storage, transactional email (Brevo), audit
 Medika.Api/           FastEndpoints endpoints, Program.cs, GlobalExceptionHandler
 ```
 
@@ -172,6 +201,15 @@ Medika.Api/           FastEndpoints endpoints, Program.cs, GlobalExceptionHandle
 - JWT is signed **only by the .NET API**; the secret lives in `appsettings.Development.json` (gitignored) locally and Azure App Service settings in prod — never in Vercel or `.env`.
 - `ApiSettings:ApiKey` (backend) must equal `API_SECRET` (frontend `.env` / Vercel env var). Neither may be committed or `PUBLIC_`-prefixed.
 - Frontend: **every** backend call goes through `src/lib/server/remoteApiProxy.ts` (`RemoteApi`), which injects API key + timestamp + Bearer token. `src/lib/server/api.ts` is a thin facade over it (`api.get/.post/.patch/.del`) — keep using it; never call `fetch` to the backend directly. `RemoteApi.fetchThenRetrieveStream()` exists for file/PDF downloads.
+
+### Transactional email (Brevo, pattern ported from eGestion)
+
+- `IEmailService` (`Medika.Application/Common/Interfaces/`) is the provider-agnostic email abstraction (single / multi recipient, `isHtml`). Inject it; never talk to a provider SDK directly.
+- The only implementation is `BrevoEmailService` (`Medika.Infrastructure/Email/`): a **typed `HttpClient`** (`AddHttpClient<IEmailService, BrevoEmailService>` in `DependencyInjection.AddEmail`) that `POST`s to Brevo's `/v3/smtp/email` with an `api-key` header. **Brevo is the sole provider** — there is no provider switch.
+- Config lives in the `Brevo` section (`BrevoSettings`, bound as a singleton POCO like `JwtSettings`/`R2Settings`). `ApiKey`/`FromEmail` are secrets: **empty locally and in CI** (`appsettings.json` ships empty), set in prod via `Brevo__ApiKey` (Azure App Service); `FromEmail` must be a verified Brevo sender.
+- **When unconfigured, sending is a no-op** (logs a warning, returns) — it never throws. This keeps email-driven flows working end-to-end in dev/CI without a provider account.
+- Password reset uses this: `IPasswordResetSender` → `EmailPasswordResetSender` builds the link, **logs it** (so the flow stays testable without a real inbox), then sends via `IEmailService`. (The earlier log-only `LoggingPasswordResetSender` is superseded but kept for reference.)
+- Tests: `BrevoEmailServiceTests` (xUnit, HTTP layer stubbed) cover endpoint/payload/headers, html-vs-text, multi-recipient, error status, and the unconfigured no-op. The password-reset Playwright spec (`e2e/password-reset.spec.ts`) guards the user-facing flow (non-mutating, email-independent).
 
 ### Frontend — SvelteKit 2 / Svelte 5
 
@@ -222,7 +260,7 @@ Utility classes: `.card`, `.mk-nav`, `.mk-content`, `.mk-input`, `.mk-tab`, `.mk
 
 **Every time a PR is merged, the same change-set must, before the work is considered done:**
 
-1. **Update `ROADMAP.md`** — move the shipped items to their new status (✅ / 🟡 / ⬜ / ⏸️) and note anything the merge changed. The roadmap must never lag behind what's on `dev`.
+1. **Update GitHub** — move the matching **issue** to its new status (`status:` label + column on the [Project board](https://github.com/users/akqira/projects/3)), close it if shipped, and create one for any new remaining work. GitHub is the source of truth for state and must never lag behind `dev`. **`ROADMAP.md` stays light** — only edit it when the **vision**, a **phase**, or an **architecture decision** changes (not for per-item detail).
 2. **Have passing E2E coverage** — every merged feature/bugfix must have a Playwright spec in `apps/frontend/e2e/` that exercises it (failing-path first, per the existing convention) and the suite must pass. If a PR ships behaviour with no e2e spec, add one in the same PR (or an immediate follow-up before the next merge).
 
 A local `gh pr merge` triggers a reminder via the `PostToolUse` hook in `.claude/settings.json`, but the rule applies to **all** merges (including those done from the GitHub web UI). The Playwright suite runs in CI on every PR/push touching `apps/**` via `.github/workflows/e2e.yml` (fresh Mongo + API + Vite), so "passing e2e" is enforced automatically.

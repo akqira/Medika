@@ -36,8 +36,8 @@ public class RegisterEndpoint : Endpoint<RegisterRequest, RegisterResponse>
     public override void Configure()
     {
         Post("/api/auth/register");
-        Roles(nameof(Role.Doctor));
-        Summary(s => s.Summary = "Register a new user (Doctor only)");
+        Permissions(PermissionConstants.Users.Add);
+        Summary(s => s.Summary = "Register a new user (requires users_can_add)");
     }
 
     public override async Task HandleAsync(RegisterRequest req, CancellationToken ct)

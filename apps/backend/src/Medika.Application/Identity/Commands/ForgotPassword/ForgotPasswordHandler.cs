@@ -28,6 +28,10 @@ public class ForgotPasswordHandler(
         user.SetPasswordResetToken(hasher.Hash(rawToken), DateTime.UtcNow.Add(TokenLifetime));
         await users.UpdateAsync(user, ct);
 
-        await sender.SendResetLinkAsync(email, rawToken, ct);
+        // Personalised greeting: doctors are addressed "Dr. {First} {Last}", staff by name.
+        var fullName = $"{user.FirstName} {user.LastName}".Trim();
+        var displayName = user.Role == Role.Doctor && fullName.Length > 0 ? $"Dr. {fullName}" : fullName;
+
+        await sender.SendResetLinkAsync(email, rawToken, displayName, ct);
     }
 }

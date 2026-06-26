@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Medika.Application\Medika.Application.csproj" />
+    <ProjectReference Include="..\..\src\Medika.Infrastructure\Medika.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Medika.Api\Medika.Api.csproj" />
   </ItemGroup>
 

@@ -24,7 +24,7 @@ public class AddActEndpoint : Endpoint<AddActRequest, AddActResponse>
     public override void Configure()
     {
         Post("/api/acts");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Finance.ManageActs);
     }
 
     public override async Task HandleAsync(AddActRequest req, CancellationToken ct)

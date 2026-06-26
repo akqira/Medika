@@ -1,4 +1,5 @@
 using FastEndpoints;
+using Medika.Application.Authorization;
 using Medika.Application.Common.Interfaces;
 using Medika.Domain.Identity;
 
@@ -25,6 +26,6 @@ public class LoginHandler(IUserRepository users, IJwtTokenGenerator jwt, IAuditS
 
         var token = jwt.Generate(user);
         return new LoginResult(token, user.Id.ToString(), user.Role.ToString(),
-            $"{user.FirstName} {user.LastName}");
+            $"{user.FirstName} {user.LastName}", PermissionResolver.Resolve(user));
     }
 }

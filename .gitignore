@@ -38,3 +38,6 @@ apps/backend/src/Medika.Api/logs/
 
 # VSCode — personal editor preferences, not project config
 .vscode/
+
+# Playwright MCP run artifacts
+.playwright-mcp/

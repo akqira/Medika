@@ -8,7 +8,7 @@ public class DeleteActEndpoint : Endpoint<DeleteActCommand>
     public override void Configure()
     {
         Delete("/api/acts/{id}");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Finance.ManageActs);
     }
 
     public override async Task HandleAsync(DeleteActCommand req, CancellationToken ct)

@@ -13,7 +13,7 @@ public class GetPatientByIdEndpoint : Endpoint<GetPatientByIdRequest, PatientDet
     public override void Configure()
     {
         Get("/api/patients/{id}");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Patients.View);
     }
 
     public override async Task HandleAsync(GetPatientByIdRequest req, CancellationToken ct)

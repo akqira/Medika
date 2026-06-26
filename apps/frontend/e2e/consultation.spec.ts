@@ -1,40 +1,38 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { login } from './helpers';
 
-// Scenario 4 / 5 — Consultation & ordonnance: the failing situations when saving.
-// The server action rejects a consultation with no patient, and finalising must
-// go through an explicit confirmation step.
+// Keyboard shortcuts are handled by a <svelte:window> listener, which only exists
+// once the page has hydrated. page.keyboard.press() does NOT wait for hydration
+// (unlike a click, which auto-waits for actionability), so on a slower CI box the
+// keypress can race the listener attach and be lost. Focusing a real form input
+// first is a user gesture that guarantees the client is interactive.
+async function ensureHydrated(page: Page) {
+	await page.getByPlaceholder('Motif…').click();
+}
+
+// Scenario 4 / 5 — Consultation & ordonnance (redesigned cockpit, issue #79).
+// Saving is a single fast action ("Enregistrer la consultation"): client-side
+// validation blocks an incomplete consultation inline (no native confirm dialog),
+// and the server still guards the no-patient case as a backstop.
 
 test.describe('Consultation — save failures', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 		await page.goto('/consultation');
-		await expect(page.getByRole('heading', { name: 'Nouvelle consultation' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
 	});
 
-	test('finalising with no patient selected is rejected by the server', async ({ page }) => {
-		// The draft path is gone — finalising is the only submit. Accept the
-		// confirmation so the form actually submits and hits the server guard.
-		page.on('dialog', (dialog) => dialog.accept());
-		await page.getByRole('button', { name: 'Finaliser la consultation' }).click();
-		await expect(page.getByText('Veuillez sélectionner un patient.')).toBeVisible();
-		// Still on the consultation page — nothing was created.
+	test('saving with no patient is blocked inline before reaching the server', async ({ page }) => {
+		await page.getByRole('button', { name: 'Enregistrer la consultation' }).click();
+		// Inline, UI-styled validation message — no dialog, no navigation.
+		await expect(page.getByText('Sélectionnez un patient')).toBeVisible();
 		await expect(page).toHaveURL(/\/consultation/);
 	});
 
-	test('finalising asks for confirmation; dismissing it does not submit', async ({ page }) => {
-		let dialogMessage = '';
-		// Playwright auto-dismisses dialogs (confirm → false), which cancels finalize.
-		page.on('dialog', (dialog) => {
-			dialogMessage = dialog.message();
-			dialog.dismiss();
-		});
-
-		await page.getByRole('button', { name: 'Finaliser la consultation' }).click();
-
-		await expect.poll(() => dialogMessage).toContain('Finaliser la consultation');
-		// Dismissed → no submit, no patient error, still on the page.
-		await expect(page.getByText('Veuillez sélectionner un patient.')).toHaveCount(0);
+	test('Ctrl+Enter triggers the same inline validation', async ({ page }) => {
+		await ensureHydrated(page);
+		await page.keyboard.press('Control+Enter');
+		await expect(page.getByText('Sélectionnez un patient')).toBeVisible();
 		await expect(page).toHaveURL(/\/consultation/);
 	});
 
@@ -47,13 +45,45 @@ test.describe('Consultation — save failures', () => {
 	});
 });
 
+// Keyboard shortcuts — Alt+N adds a medication line, Alt+2/Alt+1 switch clinical tabs.
+test.describe('Consultation — keyboard shortcuts', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+		await page.goto('/consultation');
+		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
+	});
+
+	test('Alt+N adds a medication line', async ({ page }) => {
+		await expect(page.getByText('Aucun médicament')).toBeVisible();
+		await ensureHydrated(page);
+		await page.keyboard.press('Alt+n');
+		await expect(page.getByText('1 médicament', { exact: true })).toBeVisible();
+	});
+
+	test('Alt+2 / Alt+1 switch between the Diagnostic and Motif tabs', async ({ page }) => {
+		const diagnosis = page.getByPlaceholder('Diagnostic principal…');
+		const motif = page.getByPlaceholder('Motif…');
+		// Motif panel is active by default; diagnostic panel is in the DOM but hidden.
+		await expect(motif).toBeVisible();
+		await expect(diagnosis).toBeHidden();
+		await ensureHydrated(page);
+
+		await page.keyboard.press('Alt+2');
+		await expect(diagnosis).toBeVisible();
+
+		await page.keyboard.press('Alt+1');
+		await expect(motif).toBeVisible();
+		await expect(diagnosis).toBeHidden();
+	});
+});
+
 // Ordonnance — posologie is a free-text field (the ambiguous "Prise"/"Fréquence"
-// column was dropped; dosage/posologie is now directly enterable, no longer hidden).
+// column was dropped; dosage/posologie is now directly enterable).
 test.describe('Consultation — ordonnance posologie', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 		await page.goto('/consultation');
-		await expect(page.getByRole('heading', { name: 'Nouvelle consultation' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
 	});
 
 	test('posologie is a visible free-text input on a medication line', async ({ page }) => {
@@ -64,8 +94,7 @@ test.describe('Consultation — ordonnance posologie', () => {
 		await posologie.fill('1 comprimé au besoin');
 		await expect(posologie).toHaveValue('1 comprimé au besoin');
 
-		// Column header is "Posologie"; the old ambiguous "Prise" header is gone.
-		await expect(page.getByText('Posologie', { exact: true })).toBeVisible();
+		// The old ambiguous "Prise" column header is gone.
 		await expect(page.getByText('Prise', { exact: true })).toHaveCount(0);
 	});
 
@@ -89,11 +118,19 @@ test.describe('Consultation — ordonnance posologie', () => {
 		await posologie.blur();
 		await expect(posologie).toHaveValue('1 cp au besoin');
 	});
+
+	test('a frequent-medication chip adds a pre-filled line', async ({ page }) => {
+		await page.getByRole('button', { name: '+ METFORMINE 1000mg' }).click();
+		await expect(page.getByText('1 médicament', { exact: true })).toBeVisible();
+		// The medication name input (Combobox) of the new line is pre-filled.
+		await expect(page.locator('.med-card input').first()).toHaveValue('METFORMINE 1000mg');
+	});
 });
 
-// Act catalogue → consultation: selecting an act pre-fills the honoraires.
-test.describe('Consultation — act picker', () => {
-	test('selecting a catalogue act pre-fills the honoraires', async ({ page }) => {
+// Act catalogue → consultation: an honoraire chip carries the act's tariff and
+// pre-fills the montant (the act picker is now a quick-pick chip row).
+test.describe('Consultation — honoraire chips', () => {
+	test('clicking a catalogue-act chip pre-fills the montant', async ({ page }) => {
 		await login(page);
 
 		// Seed an act in the catalogue and grab its id.
@@ -108,10 +145,10 @@ test.describe('Consultation — act picker', () => {
 
 		try {
 			await page.goto('/consultation');
-			await expect(page.getByRole('heading', { name: 'Nouvelle consultation' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
 
-			await page.locator('#act').selectOption(actId!);
-			// Honoraires auto-filled from the act's tariff.
+			await page.locator(`.fee-chip[data-act-id="${actId}"]`).click();
+			// Montant auto-filled from the act's tariff.
 			await expect(page.locator('#tariff')).toHaveValue('3000');
 		} finally {
 			// Cleanup so the suite stays re-runnable.

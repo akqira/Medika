@@ -8,7 +8,7 @@ public class SaveConsultationEndpoint : Endpoint<SaveConsultationCommand, SavedC
     public override void Configure()
     {
         Post("/api/consultations");
-        Roles("Doctor");
+        Permissions(PermissionConstants.Consultations.Manage);
     }
 
     public override async Task HandleAsync(SaveConsultationCommand req, CancellationToken ct)

@@ -9,7 +9,7 @@ public class GetPatientsEndpoint : Endpoint<GetPatientsRequest, PagedResult<Pati
     public override void Configure()
     {
         Get("/api/patients");
-        Roles("Doctor", "Receptionist");
+        Permissions(PermissionConstants.Patients.View);
     }
 
     public override async Task<PagedResult<PatientSummary>> ExecuteAsync(GetPatientsRequest req, CancellationToken ct)

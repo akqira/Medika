@@ -147,6 +147,10 @@ public static class DomainMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
+            // Map the private backing field, not the read-only projection, so the permission
+            // list round-trips (a getter-only property serializes but never deserializes).
+            cm.UnmapMember(u => u.Permissions);
+            cm.MapField("_permissions").SetElementName("permissions");
         });
     }
 }

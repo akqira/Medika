@@ -120,6 +120,37 @@ for **prod**. Either way, dev and prod must use **different** DB users and secre
 
 ---
 
+## 3b. Other application secrets (R2, Brevo)
+
+Beyond Mongo + JWT, the app binds two more secret-bearing config sections. They were
+**not** part of the leak, but manage them the same way — never in `appsettings.json`
+(which ships with empty values), always via User Secrets locally and App Service settings
+/ Key Vault in prod:
+
+| Section | Secret keys | Env-var form (Azure `__`) | Key Vault form (`--`) |
+|---------|-------------|----------------------------|------------------------|
+| `R2` (Cloudflare storage) | `AccessKeyId`, `SecretAccessKey` | `R2__AccessKeyId`, `R2__SecretAccessKey` | `R2--AccessKeyId`, `R2--SecretAccessKey` |
+| `Brevo` (transactional email) | `ApiKey` | `Brevo__ApiKey` | `Brevo--ApiKey` |
+
+### Brevo API key
+The Brevo provider sends password-reset emails (see `CLAUDE.md` → *Transactional email*).
+The key lives **only** in `Brevo__ApiKey`:
+
+- **Local / CI:** leave `Brevo:ApiKey` empty. Sending is a deliberate no-op (the link is
+  still logged), so nothing breaks and no real email is sent from dev.
+- **Prod:** set `Brevo__ApiKey` (App Service env var or Key Vault `Brevo--ApiKey`). Also
+  confirm `Brevo:FromEmail` is a **verified Brevo sender** or on an authenticated domain,
+  or sends are rejected.
+- **Rotation:** Brevo dashboard → **SMTP & API → API Keys** → generate a new v3 key,
+  update `Brevo__ApiKey` in each prod app, then delete the old key. No code or redeploy
+  needed — it's read from config at startup.
+- If a key is ever exposed, treat it as public: a leaked Brevo key lets anyone send mail
+  as your account (and burn your sending quota / reputation). Rotate immediately.
+
+Set per environment — dev and prod use **different** keys, like every other secret here.
+
+---
+
 ## 4. About git history
 
 You chose "stop tracking + rotate" rather than rewriting history. That's reasonable
@@ -137,6 +168,7 @@ and force-push, coordinating with any collaborators.
 - [ ] Update the **other** project's config with its own new credentials
 - [ ] Azure dev app: set `MongoDB__ConnectionString` + `Jwt__Secret`
 - [ ] Azure prod app: set its own `MongoDB__ConnectionString` + `Jwt__Secret`
+- [ ] Azure prod app: set `Brevo__ApiKey` (+ verify `Brevo:FromEmail` is a verified Brevo sender); leave empty in dev/CI
 - [ ] Commit the gitignore change + `appsettings.Development.example.json`
 - [ ] (optional) Enable Atlas IP Access List to restrict who can connect
 - [ ] (optional) Scrub git history before any public release

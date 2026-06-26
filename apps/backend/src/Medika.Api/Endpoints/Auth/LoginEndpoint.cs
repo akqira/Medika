@@ -34,8 +34,8 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
     public override async Task<LoginResponse> ExecuteAsync(LoginRequest req, CancellationToken ct)
     {
         var result = await new LoginCommand(req.Email, req.Password).ExecuteAsync(ct);
-        return new LoginResponse(result.Token, result.UserId, result.Role, result.FullName);
+        return new LoginResponse(result.Token, result.UserId, result.Role, result.FullName, result.Permissions);
     }
 }
 
-public record LoginResponse(string Token, string UserId, string Role, string FullName);
+public record LoginResponse(string Token, string UserId, string Role, string FullName, IReadOnlyList<string> Permissions);
