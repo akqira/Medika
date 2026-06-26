@@ -5,6 +5,7 @@ All notable changes to Medika are documented here. Format follows
 entries under **[Unreleased]** as PRs merge into `dev`.
 
 ## [Unreleased]
+- feat(consultation): single-screen 3-column cockpit redesign (#79) (#80, closes #79)
 - feat(email): redesign password-reset email to match #76 design (#78, closes #76)
 - feat(email): deliver password-reset links via Brevo (#74, closes #73)
 - ci(frontend): run vitest unit tests in CI (#59) (#70, closes #59)
