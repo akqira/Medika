@@ -16,6 +16,34 @@
 	let showCurrentPwd = $state(false);
 	let showNewPwd     = $state(false);
 
+	// Cabinet phone — numeric-only field, validated as an Algerian number
+	// (mobile 05/06/07 or fixed 02/03/04), 10 digits total.
+	const DZ_PHONE_RE = /^0[2-7]\d{8}$/;
+	let cabinetPhone = $state(data.profile.cabinetPhone ?? '');
+	let phoneError   = $state('');
+
+	function onPhoneInput(e: Event) {
+		// Strip every non-digit so the field can never hold text, cap at 10 digits.
+		const el = e.currentTarget as HTMLInputElement;
+		const digits = el.value.replace(/\D/g, '').slice(0, 10);
+		// Force the DOM in sync even when `digits` equals the current state (e.g.
+		// typing a letter after a full strip): no state change → no re-render, so
+		// the rejected char would otherwise linger in the input.
+		el.value = digits;
+		cabinetPhone = digits;
+		if (phoneError) phoneError = '';
+	}
+
+	function validateCabinetPhone(): boolean {
+		const p = cabinetPhone.trim();
+		if (p && !DZ_PHONE_RE.test(p)) {
+			phoneError = 'Numéro algérien invalide — ex : 0550 12 34 56 ou 023 45 67 89';
+			return false;
+		}
+		phoneError = '';
+		return true;
+	}
+
 	const SPECIALTIES = [
 		'Médecine générale', 'Cardiologie', 'Pédiatrie', 'Gynécologie-Obstétrique',
 		'Dermatologie', 'Ophtalmologie', 'ORL', 'Orthopédie', 'Neurologie',
@@ -95,7 +123,10 @@
 
 			<!-- ─── TAB: Mon cabinet ─── -->
 			{#if activeTab === 'cabinet'}
-				<form method="POST" action="?/saveCabinet" use:enhance>
+				<form method="POST" action="?/saveCabinet" use:enhance={({ cancel }) => {
+					if (!validateCabinetPhone()) { cancel(); return; }
+					return async ({ update }) => update();
+				}}>
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
 
 						<div style="grid-column:1/-1">
@@ -135,7 +166,8 @@
 
 						<div>
 							<label for="cabinetPhone" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Téléphone du cabinet</label>
-							<input id="cabinetPhone" name="cabinetPhone" type="tel" class="mk-input" value={data.profile.cabinetPhone} placeholder="ex: 023 XX XX XX" />
+							<input id="cabinetPhone" name="cabinetPhone" type="tel" inputmode="numeric" maxlength="10" class="mk-input" class:input-err={phoneError} value={cabinetPhone} oninput={onPhoneInput} placeholder="ex: 023 45 67 89" />
+							{#if phoneError}<p class="field-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {phoneError}</p>{/if}
 						</div>
 
 					</div>
@@ -216,3 +248,12 @@
 	</div>
 
 </div>
+
+<style>
+	.input-err { border-color: var(--danger) !important; background: var(--danger-light); }
+	.input-err:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.12) !important; }
+	.field-error {
+		display: flex; align-items: center; gap: 5px;
+		font-size: 12px; color: var(--danger); margin-top: 6px;
+	}
+</style>
