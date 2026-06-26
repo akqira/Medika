@@ -1,5 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { login } from './helpers';
+
+// Keyboard shortcuts are handled by a <svelte:window> listener, which only exists
+// once the page has hydrated. page.keyboard.press() does NOT wait for hydration
+// (unlike a click, which auto-waits for actionability), so on a slower CI box the
+// keypress can race the listener attach and be lost. Focusing a real form input
+// first is a user gesture that guarantees the client is interactive.
+async function ensureHydrated(page: Page) {
+	await page.getByPlaceholder('Motif…').click();
+}
 
 // Scenario 4 / 5 — Consultation & ordonnance (redesigned cockpit, issue #79).
 // Saving is a single fast action ("Enregistrer la consultation"): client-side
@@ -21,6 +30,7 @@ test.describe('Consultation — save failures', () => {
 	});
 
 	test('Ctrl+Enter triggers the same inline validation', async ({ page }) => {
+		await ensureHydrated(page);
 		await page.keyboard.press('Control+Enter');
 		await expect(page.getByText('Sélectionnez un patient')).toBeVisible();
 		await expect(page).toHaveURL(/\/consultation/);
@@ -45,6 +55,7 @@ test.describe('Consultation — keyboard shortcuts', () => {
 
 	test('Alt+N adds a medication line', async ({ page }) => {
 		await expect(page.getByText('Aucun médicament')).toBeVisible();
+		await ensureHydrated(page);
 		await page.keyboard.press('Alt+n');
 		await expect(page.getByText('1 médicament', { exact: true })).toBeVisible();
 	});
@@ -55,6 +66,7 @@ test.describe('Consultation — keyboard shortcuts', () => {
 		// Motif panel is active by default; diagnostic panel is in the DOM but hidden.
 		await expect(motif).toBeVisible();
 		await expect(diagnosis).toBeHidden();
+		await ensureHydrated(page);
 
 		await page.keyboard.press('Alt+2');
 		await expect(diagnosis).toBeVisible();
