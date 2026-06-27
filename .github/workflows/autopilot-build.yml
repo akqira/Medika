@@ -167,6 +167,14 @@ jobs:
           done
           node .github/autopilot/screenshot.mjs || echo "::warning::Screenshot failed; email will go without it."
 
+      - name: Post screenshot into the PR
+        if: steps.result.outputs.status == 'pr_opened' && steps.result.outputs.route != ''
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: node .github/autopilot/post-screenshot.mjs
+
       - name: Upload screenshot artifact
         if: ${{ !cancelled() && steps.result.outputs.status == 'pr_opened' }}
         uses: actions/upload-artifact@v4

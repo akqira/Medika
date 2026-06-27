@@ -23,6 +23,8 @@ issue labelled status:in-progress
    └─ green           → open PR vs dev            (status: pr_opened)
         │
         ▼  screenshot.mjs (boots stack, logs in, captures feature route)
+        ▼  post-screenshot.mjs (commits shot under docs/ui-validation/, posts it
+                                into the PR via a commit-pinned raw URL — UI routes only)
         ▼  notify.mjs (Brevo email + issue comment)
         │
    Kader reviews & MERGES the PR  ← manual gate, always
