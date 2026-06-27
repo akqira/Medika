@@ -3,13 +3,16 @@ name: E2E
 # Runs the Playwright suite against a real, throwaway stack: a fresh MongoDB
 # service container, the .NET API (seeds the doctor on startup), and the Vite
 # dev server. Enforces the project rule that merged features ship passing e2e.
+#
+# The `e2e` job is a REQUIRED status check on dev/main (branch protection). It
+# therefore runs on EVERY PR — with no `paths:` filter on the pull_request
+# trigger — so the check always reports. The heavy stack only spins up when
+# apps/** (or this workflow) actually changed; an irrelevant PR (e.g. docs-only)
+# short-circuits to a green `e2e` instead of leaving the required check forever
+# "Expected — waiting for status".
 on:
   pull_request:
     branches: [dev, main]
-    paths:
-      - 'apps/backend/**'
-      - 'apps/frontend/**'
-      - '.github/workflows/e2e.yml'
   push:
     branches: [dev]
     paths:
@@ -51,24 +54,42 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v5
+      # Detect whether anything testable changed. On a PR with no apps/** (or
+      # workflow) edits, every step below is skipped and the job reports green —
+      # satisfying the required check without booting the stack.
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            app:
+              - 'apps/backend/**'
+              - 'apps/frontend/**'
+              - '.github/workflows/e2e.yml'
+
+      - if: steps.changes.outputs.app == 'true'
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
-      - uses: pnpm/action-setup@v6
+      - if: steps.changes.outputs.app == 'true'
+        uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v6
+      - if: steps.changes.outputs.app == 'true'
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'pnpm'
 
       - name: Install frontend deps
+        if: steps.changes.outputs.app == 'true'
         run: pnpm --filter frontend install
 
       - name: Install Playwright browser
+        if: steps.changes.outputs.app == 'true'
         run: pnpm --filter frontend exec playwright install --with-deps chromium
 
       - name: Start backend (http://localhost:8000)
+        if: steps.changes.outputs.app == 'true'
         run: |
           nohup dotnet run --project apps/backend/src/Medika.Api/Medika.Api.csproj \
             --no-launch-profile --urls http://localhost:8000 > backend.log 2>&1 &
@@ -82,6 +103,7 @@ jobs:
           echo "::error::API did not start"; cat backend.log; exit 1
 
       - name: Start frontend (http://localhost:5000)
+        if: steps.changes.outputs.app == 'true'
         run: |
           nohup pnpm --filter frontend dev > frontend.log 2>&1 &
           echo "Waiting for the Vite dev server..."
@@ -92,10 +114,11 @@ jobs:
           echo "::error::Frontend did not start"; cat frontend.log; exit 1
 
       - name: Run Playwright e2e
+        if: steps.changes.outputs.app == 'true'
         run: pnpm --filter frontend exec playwright test
 
       - name: Upload Playwright report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.changes.outputs.app == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
