@@ -10,6 +10,7 @@
 	import Combobox from '$lib/components/Combobox.svelte';
 	import QuickAddPatientModal from '$lib/components/QuickAddPatientModal.svelte';
 	import { expandPosology } from '$lib/posology';
+	import { toast } from '$lib/stores/toast.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -28,6 +29,7 @@
 		patients = [patient, ...patients];
 		selectedPatientId = patient.id;
 		showQuickAdd = false;
+		toast.success('Patient créé avec succès.');
 	}
 
 	// ── Patient clinical context (allergies / antécédents / dernières consultations) ──
@@ -285,8 +287,16 @@
 	method="POST"
 	use:enhance={() => {
 		submitting = true;
-		return async ({ update }) => {
+		return async ({ result, update }) => {
 			submitting = false;
+			// Success is signalled by the redirect to /patients (toast fires there).
+			// A failed save returns here — surface the error as a toast (issue #129).
+			if (result.type === 'failure') {
+				const msg = (result.data?.error as string | undefined) ?? 'Échec de l’enregistrement de la consultation.';
+				toast.error(msg);
+			} else if (result.type === 'error') {
+				toast.error('Échec de l’enregistrement de la consultation.');
+			}
 			await update();
 		};
 	}}

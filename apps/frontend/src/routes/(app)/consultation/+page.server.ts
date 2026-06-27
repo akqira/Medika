@@ -80,6 +80,6 @@ export const actions: Actions = {
 			return fail(500, { error: msg });
 		}
 
-		redirect(303, `/patients?created=${result.consultationId}`);
+		redirect(303, `/patients?created=${result.consultationId}&toast=consultation-saved`);
 	},
 };

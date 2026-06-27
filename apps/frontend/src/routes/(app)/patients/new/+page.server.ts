@@ -57,6 +57,6 @@ export const actions: Actions = {
 			return fail(500, { error: message });
 		}
 
-		redirect(303, `/patients?created=${created.patientId}`);
+		redirect(303, `/patients?created=${created.patientId}&toast=patient-created`);
 	},
 };

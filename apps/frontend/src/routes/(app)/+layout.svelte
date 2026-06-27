@@ -4,6 +4,7 @@
 	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
 	import Icon from '$lib/components/Icon.svelte';
+	import Toaster from '$lib/components/Toaster.svelte';
 	import { PERMISSIONS, can } from '$lib/permissions';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -355,3 +356,6 @@
 <main class="mk-content">
 	{@render children()}
 </main>
+
+<!-- Global notification viewport (issue #129) -->
+<Toaster />
