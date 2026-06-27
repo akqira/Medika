@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { frValidation } from '$lib/actions/frValidation';
 	import { invalidateAll } from '$app/navigation';
 	import Icon from '$lib/components/Icon.svelte';
 	import { DEFAULT_SECRETARY } from '$lib/permissions';
@@ -72,7 +73,7 @@
 	{#if showAdd}
 		<div class="card" style="margin:16px 0;padding:20px">
 			<h2 style="font-size:15px;font-weight:700;color:var(--text);margin:0 0 14px">Nouveau secrétaire</h2>
-			<form method="POST" action="?/createStaff" use:enhance={onResult}>
+			<form method="POST" action="?/createStaff" use:frValidation use:enhance={onResult}>
 				<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
 					<label style="display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--text-muted)">
 						Prénom

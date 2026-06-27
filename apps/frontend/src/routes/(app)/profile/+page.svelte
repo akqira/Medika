@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { frValidation } from '$lib/actions/frValidation';
 	import type { PageData, ActionData } from './$types';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -146,7 +147,7 @@
 
 			<!-- ─── TAB: Mon cabinet ─── -->
 			{#if activeTab === 'cabinet'}
-				<form method="POST" action="?/saveCabinet" use:enhance={({ cancel }) => {
+				<form method="POST" action="?/saveCabinet" use:frValidation use:enhance={({ cancel }) => {
 					if (!validateCabinetPhone()) {
 						// Don't save an invalid phone — but make the block VISIBLE so the
 						// user's cabinet/order/address edits don't silently vanish (#85).
@@ -213,7 +214,7 @@
 
 			<!-- ─── TAB: Mon compte ─── -->
 			{:else if activeTab === 'compte'}
-				<form method="POST" action="?/saveAccount" use:enhance>
+				<form method="POST" action="?/saveAccount" use:frValidation use:enhance>
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
 
 						<div>
@@ -247,7 +248,7 @@
 
 			<!-- ─── TAB: Sécurité ─── -->
 			{:else}
-				<form method="POST" action="?/changePassword" use:enhance>
+				<form method="POST" action="?/changePassword" use:frValidation use:enhance>
 					<div style="max-width:380px;display:flex;flex-direction:column;gap:16px;margin-bottom:20px">
 
 						<div>

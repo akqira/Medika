@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { frValidation } from '$lib/actions/frValidation';
 	import type { PageData, ActionData } from './$types';
 	import Icon from '$lib/components/Icon.svelte';
 
@@ -39,6 +40,7 @@
 		<form
 			method="POST"
 			action="?/add"
+			use:frValidation
 			use:enhance={() => { submitting = true; return async ({ update }) => { submitting = false; await update(); }; }}
 			style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap"
 		>
