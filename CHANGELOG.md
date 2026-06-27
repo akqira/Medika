@@ -5,6 +5,7 @@ All notable changes to Medika are documented here. Format follows
 entries under **[Unreleased]** as PRs merge into `dev`.
 
 ## [Unreleased]
+- fix(patients): show real cabinet total in header, filter count below search (#106) (#108, closes #106)
 - fix(profile): persist cabinet name/order/address fields (#85) (#95, closes #85)
 - fix(profile): enforce Algerian phone format on cabinet field (#84) (#93, closes #84)
 - fix(profile): remove duplicate Ville field from cabinet form (#83) (#89, closes #83)
