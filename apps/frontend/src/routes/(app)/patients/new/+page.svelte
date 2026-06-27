@@ -277,12 +277,12 @@
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
 						<div>
 							<label for="firstName" class="field-label" class:err={errors.firstName}>PRÉNOM *</label>
-							<input id="firstName" name="firstName" bind:value={firstName} placeholder="Ahmed" maxlength={NAME_MAX} class="mk-input" class:input-err={errors.firstName} />
+							<input id="firstName" name="firstName" bind:value={firstName} placeholder="Ahmed" class="mk-input" class:input-err={errors.firstName} />
 							{#if errors.firstName}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.firstName}</p>{/if}
 						</div>
 						<div>
 							<label for="lastName" class="field-label" class:err={errors.lastName}>NOM *</label>
-							<input id="lastName" name="lastName" bind:value={lastName} placeholder="Benali" maxlength={NAME_MAX} class="mk-input" class:input-err={errors.lastName} />
+							<input id="lastName" name="lastName" bind:value={lastName} placeholder="Benali" class="mk-input" class:input-err={errors.lastName} />
 							{#if errors.lastName}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.lastName}</p>{/if}
 						</div>
 						<div>
