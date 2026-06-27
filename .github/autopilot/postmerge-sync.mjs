@@ -2,9 +2,10 @@
 //   1. label status:in-progress -> status:done
 //   2. close the issue
 //   3. move its Projects v2 card Status -> Done (needs PROJECTS_TOKEN)
-//   4. prepend a CHANGELOG.md entry (committed by the workflow step)
 // Each step is best-effort and logs; a board-permission miss never blocks the rest.
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+// (The CHANGELOG entry is added PRE-merge by .github/workflows/changelog.yml — a
+// post-merge push to the protected `dev` branch is rejected by the required `e2e`
+// check, so it can't live here.)
 
 const token = process.env.GH_TOKEN;
 const [owner, repo] = process.env.REPO.split('/');
@@ -92,17 +93,4 @@ try {
   }
 } catch (e) {
   console.error('[sync] board move failed (PROJECTS_TOKEN missing project scope?):', e.message);
-}
-
-// --- 4: prepend CHANGELOG entry ---
-try {
-  const path = 'CHANGELOG.md';
-  const entry = `- ${pr.title} (#${pr.number}, closes #${issue})`;
-  let md = existsSync(path) ? readFileSync(path, 'utf8') : '# Changelog\n\nAll notable changes to Medika.\n\n## [Unreleased]\n';
-  if (!md.includes('## [Unreleased]')) md = md.replace(/^(# Changelog[\s\S]*?\n)/, `$1\n## [Unreleased]\n`);
-  md = md.replace('## [Unreleased]', `## [Unreleased]\n${entry}`);
-  writeFileSync(path, md);
-  console.log('CHANGELOG.md updated.');
-} catch (e) {
-  console.error('[sync] changelog update failed:', e.message);
 }

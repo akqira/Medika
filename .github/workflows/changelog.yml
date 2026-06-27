@@ -1,0 +1,64 @@
+name: Changelog (pre-merge)
+
+# Keep CHANGELOG.md in sync BEFORE merge: prepend this PR's entry onto the PR
+# branch so it rides through the normal e2e-gated merge into `dev`.
+#
+# This replaces the old post-merge push straight to `dev`, which branch protection
+# now rejects: `e2e` is a REQUIRED status check on `dev`, and a direct push (with
+# `[skip ci]`) can never satisfy it, so GitHub declines the push (GH006). Doing the
+# changelog on the PR branch means the required check runs and passes normally.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+    branches: [dev]
+
+# One changelog update per PR at a time; a rapid re-sync supersedes the previous.
+concurrency:
+  group: changelog-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    # Same-repo PRs only (our token can't push to a fork's branch). Opt out per-PR
+    # with a `skip-changelog` label.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          # A PAT so the changelog commit re-triggers the required `e2e` check on the
+          # new head. A GITHUB_TOKEN push would NOT trigger workflows, leaving `e2e`
+          # unreported on the new commit and the PR blocked.
+          token: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Configure git
+        run: |
+          git config user.name "medika-autopilot[bot]"
+          git config user.email "autopilot@medika.local"
+
+      - name: Prepend this PR's CHANGELOG entry (idempotent)
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          node .github/autopilot/changelog-entry.mjs
+          if git diff --quiet CHANGELOG.md; then
+            echo "CHANGELOG already current for PR #${PR_NUMBER} — nothing to commit."
+          else
+            git add CHANGELOG.md
+            git commit -m "docs(changelog): record PR #${PR_NUMBER}"
+            git push origin "HEAD:${PR_BRANCH}"
+          fi
