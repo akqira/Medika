@@ -16,11 +16,27 @@
 	let showCurrentPwd = $state(false);
 	let showNewPwd     = $state(false);
 
+	// Cabinet form fields are bound to local $state (not one-way `value={data...}`).
+	// A one-way `value={expr}` input gets re-asserted to `expr` on every component
+	// re-render — so editing the phone (which updates `cabinetPhone` on each keystroke)
+	// re-rendered the form and silently wiped the user's typed name/order/address back
+	// to their loaded values, which then persisted as empty. That was the root cause of
+	// #85 ("champs non persistés"). Binding to state makes the inputs survive re-renders.
+	let cabinetName    = $state(data.profile.cabinetName ?? '');
+	let specialty      = $state(data.profile.specialty ?? '');
+	let rppsNumber     = $state(data.profile.rppsNumber ?? '');
+	let cabinetAddress = $state(data.profile.cabinetAddress ?? '');
+	let cabinetWilaya  = $state(data.profile.cabinetWilaya ?? '');
+
 	// Cabinet phone — numeric-only field, validated as an Algerian number
 	// (mobile 05/06/07 or fixed 02/03/04), 10 digits total.
 	const DZ_PHONE_RE = /^0[2-7]\d{8}$/;
 	let cabinetPhone = $state(data.profile.cabinetPhone ?? '');
 	let phoneError   = $state('');
+	// Client-side, form-level error shown when the save is cancelled before it
+	// reaches the server (e.g. invalid phone). Without it the cancel is silent and
+	// the cabinet/order/address edits look like they "didn't persist" (#85).
+	let cabinetSaveError = $state('');
 
 	function onPhoneInput(e: Event) {
 		// Strip every non-digit so the field can never hold text, cap at 10 digits.
@@ -32,6 +48,7 @@
 		el.value = digits;
 		cabinetPhone = digits;
 		if (phoneError) phoneError = '';
+		if (cabinetSaveError) cabinetSaveError = '';
 	}
 
 	function validateCabinetPhone(): boolean {
@@ -106,7 +123,7 @@
 		</div>
 
 		<!-- Feedback banner -->
-		{#if form?.success}
+		{#if form?.success && !cabinetSaveError}
 			<div style="padding:12px 20px;background:var(--success-light);border-bottom:1px solid #A7F3D0;display:flex;align-items:center;gap:8px">
 				<Icon name="checkCircle" size={15} color="var(--success)" />
 				<span style="font-size:13.5px;color:var(--success);font-weight:500">{form.success}</span>
@@ -118,48 +135,66 @@
 				<span style="font-size:13.5px;color:var(--danger);font-weight:500">{form.error}</span>
 			</div>
 		{/if}
+		{#if cabinetSaveError && activeTab === 'cabinet'}
+			<div style="padding:12px 20px;background:var(--danger-light);border-bottom:1px solid #FECACA;display:flex;align-items:center;gap:8px">
+				<Icon name="alertCircle" size={15} color="var(--danger)" />
+				<span style="font-size:13.5px;color:var(--danger);font-weight:500">{cabinetSaveError}</span>
+			</div>
+		{/if}
 
 		<div style="padding:24px">
 
 			<!-- ─── TAB: Mon cabinet ─── -->
 			{#if activeTab === 'cabinet'}
 				<form method="POST" action="?/saveCabinet" use:enhance={({ cancel }) => {
-					if (!validateCabinetPhone()) { cancel(); return; }
+					if (!validateCabinetPhone()) {
+						// Don't save an invalid phone — but make the block VISIBLE so the
+						// user's cabinet/order/address edits don't silently vanish (#85).
+						// The typed values stay in the inputs; the user fixes the phone
+						// and re-saves.
+						cancel();
+						cabinetSaveError = 'Enregistrement annulé : corrigez le numéro de téléphone du cabinet, puis réessayez. Vos autres modifications sont conservées.';
+						const phoneEl = document.getElementById('cabinetPhone');
+						phoneEl?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+						phoneEl?.focus();
+						return;
+					}
+					cabinetSaveError = '';
 					return async ({ update }) => update();
 				}}>
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
 
 						<div style="grid-column:1/-1">
 							<label for="cabinetName" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Nom du cabinet</label>
-							<input id="cabinetName" name="cabinetName" class="mk-input" value={data.profile.cabinetName} placeholder="Cabinet médical Dr. …" />
+							<input id="cabinetName" name="cabinetName" class="mk-input" bind:value={cabinetName} placeholder="Cabinet médical Dr. …" />
 						</div>
 
 						<div>
 							<label for="specialty" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Spécialité</label>
-							<select id="specialty" name="specialty" class="mk-input">
+							<select id="specialty" name="specialty" class="mk-input" bind:value={specialty}>
 								<option value="">— Choisir —</option>
 								{#each SPECIALTIES as s}
-									<option value={s} selected={data.profile.specialty === s}>{s}</option>
+									<option value={s}>{s}</option>
 								{/each}
 							</select>
 						</div>
 
 						<div>
 							<label for="rppsNumber" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">N° RPPS / Ordre médical</label>
-							<input id="rppsNumber" name="rppsNumber" class="mk-input" value={data.profile.rppsNumber} placeholder="ex: 10003456789" />
+							<input id="rppsNumber" name="rppsNumber" class="mk-input" bind:value={rppsNumber} placeholder="ex: 10003456789" />
 						</div>
 
 						<div style="grid-column:1/-1">
 							<label for="cabinetAddress" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Adresse</label>
-							<input id="cabinetAddress" name="cabinetAddress" class="mk-input" value={data.profile.cabinetAddress} placeholder="Rue, numéro, quartier…" />
+							<input id="cabinetAddress" name="cabinetAddress" class="mk-input" bind:value={cabinetAddress} placeholder="Rue, numéro, quartier…" />
 						</div>
 
 						<div>
 							<label for="cabinetWilaya" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Wilaya</label>
-							<select id="cabinetWilaya" name="cabinetWilaya" class="mk-input">
+							<select id="cabinetWilaya" name="cabinetWilaya" class="mk-input" bind:value={cabinetWilaya}>
 								<option value="">— Choisir —</option>
 								{#each WILAYAS as w}
-									<option value={w} selected={data.profile.cabinetWilaya === w}>{w}</option>
+									<option value={w}>{w}</option>
 								{/each}
 							</select>
 						</div>
