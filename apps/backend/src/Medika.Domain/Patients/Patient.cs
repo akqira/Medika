@@ -75,16 +75,34 @@ public sealed class Patient : AggregateRoot<PatientId>
     }
 
     public void Update(
-        string firstName, string lastName, string phone,
-        string? email, string? address, string? nss, string? bloodGroup)
+        string firstName, string lastName,
+        DateOnly dateOfBirth, string gender,
+        string phone,
+        string? email, string? address, string? nss,
+        string? bloodGroup, string? wilaya,
+        string? emergencyContactName, string? emergencyContactPhone,
+        string? insuranceProvider, string? mutualInsurance,
+        string? currentTreatment,
+        IEnumerable<string> allergies,
+        IEnumerable<string> medicalHistory)
     {
         FirstName = firstName;
         LastName = lastName;
+        DateOfBirth = dateOfBirth;
+        Gender = gender;
         Phone = phone;
         Email = email;
         Address = address;
         Nss = nss;
         BloodGroup = bloodGroup is not null ? Patients.BloodGroup.From(bloodGroup) : null;
+        Wilaya = wilaya;
+        EmergencyContactName = emergencyContactName;
+        EmergencyContactPhone = emergencyContactPhone;
+        InsuranceProvider = insuranceProvider;
+        MutualInsurance = mutualInsurance;
+        CurrentTreatment = currentTreatment;
+        _allergies = allergies.ToList();
+        _medicalHistory = medicalHistory.ToList();
         UpdatedAt = DateTime.UtcNow;
     }
 
