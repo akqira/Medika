@@ -13,12 +13,19 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 		totalPages: 0, hasNextPage: false, hasPreviousPage: false
 	};
 
-	const result = await api
-		.get<PagedResult<PatientSummary>>(
+	const [result, allResult] = await Promise.all([
+		api.get<PagedResult<PatientSummary>>(
 			`/api/patients?term=${encodeURIComponent(term)}&page=${page}&pageSize=20`,
 			token
-		)
-		.catch((e) => { console.error('[patients] load failed:', e); return empty; });
+		).catch((e) => { console.error('[patients] load failed:', e); return empty; }),
+		term
+			? api.get<PagedResult<PatientSummary>>(`/api/patients?term=&page=1&pageSize=1`, token)
+				.catch(() => empty)
+			: Promise.resolve(null)
+	]);
 
-	return { result, term, page };
+	// cabinetTotal: total patients in the cabinet regardless of active filter
+	const cabinetTotal = allResult ? allResult.totalCount : result.totalCount;
+
+	return { result, term, page, cabinetTotal };
 };
