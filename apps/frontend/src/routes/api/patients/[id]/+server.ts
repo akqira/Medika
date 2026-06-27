@@ -17,6 +17,15 @@ export const GET: RequestHandler = async ({ params, cookies }) => {
 	}
 };
 
+export const PATCH: RequestHandler = async ({ params, cookies, request }) => {
+	const token = getToken(cookies);
+	if (!token) error(401, 'Non authentifié');
+
+	const body = await request.json();
+	await api.patch(`/api/patients/${params.id}`, body, token);
+	return new Response(null, { status: 204 });
+};
+
 export const DELETE: RequestHandler = async ({ params, cookies }) => {
 	const token = getToken(cookies);
 	if (!token) error(401, 'Non authentifié');
