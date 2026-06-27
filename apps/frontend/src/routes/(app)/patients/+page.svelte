@@ -23,9 +23,9 @@
 		const message = kind && TOAST_MESSAGES[kind];
 		if (!message) return;
 		toast.success(message);
+		// Strip only our own param; `created` is an existing signal other code/tests rely on.
 		const url = new URL(pageState.url);
 		url.searchParams.delete('toast');
-		url.searchParams.delete('created');
 		replaceState(url, {});
 	});
 
