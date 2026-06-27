@@ -35,12 +35,12 @@ issue labelled status:in-progress
 
 | Secret | Used for | Notes |
 |--------|----------|-------|
-| `ANTHROPIC_API_KEY` | running Claude Code headless | **autonomous spend** — billed to this key |
+| `CLAUDE_CODE_OAUTH_TOKEN` | running Claude Code headless | subscription auth (`claude setup-token`); no metered API billing. Same secret the QA-sweep workflow uses |
 | `PROJECTS_TOKEN` | board moves, PR/issue writes | classic PAT with **`project`** + **`repo`** scope. `GITHUB_TOKEN` cannot touch user Projects v2 |
 | `BREVO_API_KEY` | sending the notification email | same provider as the app's transactional email |
 | `BREVO_FROM_EMAIL` | email sender | must be a **verified** Brevo sender |
 
-The build workflow **fails fast** if `ANTHROPIC_API_KEY` is missing. Email/board steps
+The build workflow **fails fast** if `CLAUDE_CODE_OAUTH_TOKEN` is missing. Email/board steps
 degrade gracefully (log a warning, comment on the issue) if their secrets are absent.
 
 ## Guardrails
@@ -55,7 +55,7 @@ degrade gracefully (log a warning, comment on the issue) if their secrets are ab
 
 - Pause one issue: remove the `status:in-progress` label before the job starts.
 - Pause everything: disable **Autopilot — Build** in the repo Actions tab.
-- Hard stop: delete `ANTHROPIC_API_KEY` (build fails fast at the guard step).
+- Hard stop: delete `CLAUDE_CODE_OAUTH_TOKEN` (build fails fast at the guard step).
 
 ## Tuning
 
