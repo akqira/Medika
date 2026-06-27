@@ -90,6 +90,8 @@
 	// Latin letters, Arabic letters, spaces, hyphens, apostrophes
 	const NAME_RE = /^[\p{L}\s'\-]{2,}$/u;
 
+	const NAME_MAX = 100;
+
 	function validateStep1() {
 		const e: Record<string, string> = {};
 		const fn = firstName.trim();
@@ -98,11 +100,15 @@
 			e.firstName = 'Champ requis';
 		} else if (!NAME_RE.test(fn)) {
 			e.firstName = 'Lettres uniquement, 2 caractères minimum';
+		} else if (fn.length > NAME_MAX) {
+			e.firstName = '100 caractères maximum';
 		}
 		if (!ln) {
 			e.lastName = 'Champ requis';
 		} else if (!NAME_RE.test(ln)) {
 			e.lastName = 'Lettres uniquement, 2 caractères minimum';
+		} else if (ln.length > NAME_MAX) {
+			e.lastName = '100 caractères maximum';
 		}
 		if (!dateOfBirth) {
 			e.dateOfBirth = 'Date de naissance requise';
@@ -271,12 +277,12 @@
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
 						<div>
 							<label for="firstName" class="field-label" class:err={errors.firstName}>PRÉNOM *</label>
-							<input id="firstName" name="firstName" bind:value={firstName} placeholder="Ahmed" class="mk-input" class:input-err={errors.firstName} />
+							<input id="firstName" name="firstName" bind:value={firstName} placeholder="Ahmed" maxlength={NAME_MAX} class="mk-input" class:input-err={errors.firstName} />
 							{#if errors.firstName}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.firstName}</p>{/if}
 						</div>
 						<div>
 							<label for="lastName" class="field-label" class:err={errors.lastName}>NOM *</label>
-							<input id="lastName" name="lastName" bind:value={lastName} placeholder="Benali" class="mk-input" class:input-err={errors.lastName} />
+							<input id="lastName" name="lastName" bind:value={lastName} placeholder="Benali" maxlength={NAME_MAX} class="mk-input" class:input-err={errors.lastName} />
 							{#if errors.lastName}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.lastName}</p>{/if}
 						</div>
 						<div>
