@@ -1,0 +1,178 @@
+name: QA Sweep
+
+# Automated real-user-style QA of the frontend. Boots a fresh, disposable stack
+# from `dev` (= staging code), runs the QA sweep agent headless (negative /
+# non-mutating), and files triageable issues (type:bug + qa:auto + status:needs-triage).
+# Interactive counterpart: the /qa-sweep skill. See docs/qa/check-catalog.md.
+#
+# Schedule fires on the DEFAULT branch's copy of this file — merge to main to arm it.
+# Use the manual trigger (workflow_dispatch) to test it on any branch first.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # daily 03:00 UTC — adjust/loosen to control token+CI cost
+  workflow_dispatch:
+    inputs:
+      routes:
+        description: 'Routes to sweep: a page (/finance), a group (forms|app|public), or "all"'
+        required: false
+        default: 'forms'
+      dry_run:
+        description: 'true = detect + report only, file no issues'
+        required: false
+        default: 'false'
+
+# Don't stack sweeps.
+concurrency:
+  group: qa-sweep
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+    steps:
+      - id: check
+        name: Verify auth secret is present
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN secret is missing — add it in Settings → Secrets → Actions."
+            exit 1
+          fi
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+  sweep:
+    needs: guard
+    if: needs.guard.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write     # push screenshots to the qa-evidence branch
+      issues: write       # file triage issues
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Ephemeral CI stack (mirrors autopilot-build.yml / e2e.yml).
+      ApiSettings__ApiKey: ci-qa-sweep-api-key
+      Jwt__Secret: ci-qa-sweep-jwt-secret-must-be-at-least-32-bytes-0123456789
+      MongoDB__ConnectionString: mongodb://localhost:27017
+      MongoDB__DatabaseName: medika_qa_sweep
+      ASPNETCORE_ENVIRONMENT: Development
+      API_URL: http://localhost:8000
+      API_SECRET: ci-qa-sweep-api-key
+      E2E_BASE_URL: http://localhost:5000
+      E2E_EMAIL: kader.kebir@gmail.com
+      E2E_PASSWORD: Doctor@123
+      REPO: ${{ github.repository }}
+      ROUTES: ${{ github.event.inputs.routes || 'forms' }}
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+      CI: 'true'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Configure git + gh
+        run: |
+          git config user.name "medika-qa-sweep[bot]"
+          git config user.email "qa-sweep@medika.local"
+          echo "${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Install frontend deps
+        run: pnpm --filter frontend install
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install Playwright (chromium)
+        run: pnpm --filter frontend exec playwright install --with-deps chromium
+
+      - name: Boot the stack
+        run: |
+          nohup dotnet run --project apps/backend/src/Medika.Api/Medika.Api.csproj \
+            --no-launch-profile --urls http://localhost:8000 > backend.log 2>&1 &
+          for i in $(seq 1 90); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/health || echo 000)
+            [ "$code" != "000" ] && break || sleep 2
+          done
+          nohup pnpm --filter frontend dev > frontend.log 2>&1 &
+          for i in $(seq 1 90); do
+            curl -sf -o /dev/null http://localhost:5000/login && break || sleep 2
+          done
+          echo "Stack up. Backend health: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/health)"
+
+      - name: Run QA sweep agent
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          PROMPT="$(cat .github/qa-sweep/sweep-prompt.md)
+
+          ---
+          RESOLVED CONTEXT (use these concrete values):
+          E2E_BASE_URL: ${E2E_BASE_URL}
+          E2E_EMAIL: ${E2E_EMAIL}
+          E2E_PASSWORD: ${E2E_PASSWORD}
+          REPO: ${REPO}
+          ROUTES: ${ROUTES}
+          DRY_RUN: ${DRY_RUN}
+          "
+          claude -p "$PROMPT" \
+            --mcp-config .github/qa-sweep/mcp.json \
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,mcp__playwright" \
+            --permission-mode acceptEdits \
+            --max-turns 400 || echo "::warning::Claude exited non-zero; checking result file."
+
+      - name: Summarize result
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -f qa-sweep-result.json ]; then
+            echo "### QA Sweep result" >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat qa-sweep-result.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::No qa-sweep-result.json produced."
+          fi
+
+      - name: Upload screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-sweep-screenshots
+          path: qa-shots/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Dump logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "===== backend.log ====="; tail -n 100 backend.log 2>/dev/null || true
+          echo "===== frontend.log ====="; tail -n 100 frontend.log 2>/dev/null || true
