@@ -6,6 +6,7 @@ All notable changes to Medika are documented here. Format follows
 its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- ci(changelog): generate the changelog entry pre-merge (fix post-merge sync failure) (#122)
 - test(e2e): JOURNEY-02 new patient → consultation → ordonnance → honoraire (+ fix #118) (#119, closes #118)
 - feat(skill): add /journey for scenario-driven E2E journeys (#117)
 - docs(e2e): scenario library (registry + journeys/ mirror) (#116)
