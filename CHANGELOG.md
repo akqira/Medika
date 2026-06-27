@@ -5,6 +5,7 @@ All notable changes to Medika are documented here. Format follows
 entries under **[Unreleased]** as PRs merge into `dev`.
 
 ## [Unreleased]
+- fix(patients): surface the >100-char name error instead of silently capping (#114, closes #110)
 - fix(finance): reject whitespace-only charge description with 400 (#101) (#112, closes #101)
 - fix(forms): French native validation messages via reusable action (#104) (#111, closes #104)
 - fix(patients): enforce 100-char max on Nom/Prénom fields (#105) (#110, closes #105)
