@@ -45,6 +45,7 @@ feature can't silently break the booking → consultation → invoice → docume
 | ID | Scenario | Spec | Status | Issue |
 |----|----------|------|--------|-------|
 | JOURNEY-01 | Doctor logs in → finds a patient → creates a 2 000 DA consultation → writes an ordonnance → prints it → emails it to the patient | `journeys/journey-01-consultation-billing.spec.ts` | draft | _tbd_ |
+| JOURNEY-02 | Doctor logs in → adds a new patient → opens a consultation for them → records motif & diagnostic → prescribes two médicaments → bills 2 000 DA honoraire (finalized) | `journeys/journey-02-new-patient-consultation.spec.ts` | green | [#118](https://github.com/akqira/Medika/issues/118) (bug found+fixed) |
 
 ---
 
@@ -69,3 +70,39 @@ app (intent, per the conventions above).
 
 **Notes** — to be validated against the running app; steps 6–7 depend on whether
 print/email-ordonnance are built. First run will classify any gap as bug vs feature.
+
+---
+
+### JOURNEY-02 — New patient, consultation, ordonnance & honoraire
+
+**As** a doctor, **I want to** register a brand-new patient and, in the same visit,
+open a consultation, note the motif and diagnostic, prescribe their médicaments and
+bill the honoraire, **so that** a first-time patient's visit is fully captured —
+dossier, clinical record, prescription and billing — in one flow.
+
+**Steps**
+1. Log in (seeded doctor).
+2. From the patient list, add a new patient: **Kaki Kebir**, ~44 ans (né le
+   01/01/1982), groupe sanguin **A+**, tél **0555 45 45 45**, adresse *Cité des
+   enseignants, Oran*.
+3. Open a consultation for that newly-created patient.
+4. Record the motif/symptômes (*fièvre, vomissements, diarrhées*) and the diagnostic
+   (*Intoxication alimentaire*).
+5. Prescribe two médicaments — **Paracétamol 500mg** (2 fois par jour) and **Smecta**
+   (1 fois le soir après repas).
+6. Set the honoraire to **2 000 DA** and save (the consultation is finalized — this is
+   the "encaissement", as there is no separate "payé sur place" payment field).
+
+**Expected** — the patient dossier is created; the saved consultation persists for that
+patient with `tariff = 2000`, the motif containing the symptoms, the diagnostic
+*Intoxication alimentaire*, and an ordonnance of exactly two lines naming Paracétamol
+and Smecta. The spec creates its own patient; seed data is untouched.
+
+**Notes** — "encaissement / payé sur place" maps to the consultation **honoraire**
+field; the cockpit has no distinct payment-method concept. "44 ans" is entered as a
+date de naissance (the form has no age field). **Teardown is best-effort:** once the
+consultation is finalized the patient is (correctly) non-deletable via the API — 400,
+no consultation-delete endpoint exists — so the spec tolerates that; CI's fresh Mongo
+per PR prevents accumulation. This journey also **caught and fixed a real bug**: typing
+the honoraire (a number-bound input) made `fee.trim()` throw and silently killed the
+save — see the consultation cockpit `feeStr` normalisation.

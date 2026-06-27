@@ -152,6 +152,11 @@
 	let diagnosis = $state('');
 	let notes = $state('');
 	let fee = $state('');
+	// `fee` is bound to a <input type="number">, so Svelte coerces it to a number (or
+	// null when emptied) the moment a value is typed. String methods like .trim() must
+	// therefore go through this normalised view — calling fee.trim() directly threw
+	// "fee.trim is not a function" and silently killed the save handler.
+	const feeStr = $derived(String(fee ?? ''));
 
 	type Tab = 'motif' | 'diag' | 'notes';
 	let activeTab = $state<Tab>('motif');
@@ -236,7 +241,7 @@
 		const e: { patient?: string; fee?: string } = {};
 		if (!selectedPatientId) e.patient = 'Sélectionnez un patient avant d’enregistrer.';
 		const f = num(fee);
-		if (fee.trim() && (f === null || f < 0)) e.fee = 'Montant invalide.';
+		if (feeStr.trim() && (f === null || f < 0)) e.fee = 'Montant invalide.';
 		errors = e;
 		return Object.keys(e).length === 0;
 	}
@@ -566,7 +571,7 @@
 						<button
 							type="button"
 							class="fee-chip"
-							class:active={fee.trim() !== '' && num(fee) === chip.amount}
+							class:active={feeStr.trim() !== '' && num(fee) === chip.amount}
 							data-act-id={chip.actId}
 							title={chip.actName || `${chip.amount} DA`}
 							onclick={() => applyFeeChip(chip)}
