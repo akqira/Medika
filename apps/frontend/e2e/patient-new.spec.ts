@@ -40,6 +40,17 @@ test.describe('New patient — validation failures', () => {
 		await expect(page.getByText('Étape 1 sur 4')).toBeVisible();
 	});
 
+	test('step 1: a name exceeding 100 characters is rejected', async ({ page }) => {
+		const longName = 'A'.repeat(101);
+		await page.getByLabel('PRÉNOM *').fill(longName);
+		await page.getByLabel('NOM *', { exact: true }).fill('Benali');
+		await page.getByLabel('DATE DE NAISSANCE *').fill('1990-05-12');
+		await page.getByRole('button', { name: 'Continuer' }).click();
+
+		await expect(page.getByText('100 caractères maximum')).toBeVisible();
+		await expect(page.getByText('Étape 1 sur 4')).toBeVisible();
+	});
+
 	test('step 2: invalid phone format blocks advancing to step 3', async ({ page }) => {
 		// Pass step 1 with valid identity.
 		await page.getByLabel('PRÉNOM *').fill('Ahmed');
