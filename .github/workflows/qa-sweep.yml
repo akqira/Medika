@@ -9,6 +9,11 @@ name: QA Sweep
 # Use the manual trigger (workflow_dispatch) to test it on any branch first.
 
 on:
+  # TEMPORARY (remove before merge): lets us validate the workflow on the feature
+  # branch, since workflow_dispatch only registers from the default branch. Forced
+  # to dry-run + a single page below so it files nothing and stays cheap.
+  push:
+    branches: [feature/qa-sweep-tooling]
   schedule:
     - cron: '0 3 * * *'   # daily 03:00 UTC — adjust/loosen to control token+CI cost
   workflow_dispatch:
@@ -77,8 +82,10 @@ jobs:
       E2E_EMAIL: kader.kebir@gmail.com
       E2E_PASSWORD: Doctor@123
       REPO: ${{ github.repository }}
-      ROUTES: ${{ github.event.inputs.routes || 'forms' }}
-      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+      # On the temporary push-validation, force /finance + dry-run; otherwise use
+      # the dispatch inputs, defaulting to the form pages for the schedule.
+      ROUTES: ${{ github.event.inputs.routes || (github.event_name == 'push' && '/finance') || 'forms' }}
+      DRY_RUN: ${{ github.event.inputs.dry_run || (github.event_name == 'push' && 'true') || 'false' }}
       CI: 'true'
 
     steps:
