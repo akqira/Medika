@@ -45,8 +45,8 @@ export const actions: Actions = {
 		const year = Number(url.searchParams.get('year') ?? now.getFullYear());
 		const month = Number(url.searchParams.get('month') ?? now.getMonth() + 1);
 
-		const category    = data.get('category')?.toString() ?? '';
-		const description = data.get('description')?.toString() ?? '';
+		const category    = data.get('category')?.toString().trim() ?? '';
+		const description = data.get('description')?.toString().trim() ?? '';
 		const amount      = Number(data.get('amount') ?? 0);
 		const date        = data.get('date')?.toString() ?? new Date().toISOString().split('T')[0];
 
