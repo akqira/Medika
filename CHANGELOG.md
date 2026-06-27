@@ -1,10 +1,15 @@
 # Changelog
 
 All notable changes to Medika are documented here. Format follows
-[Keep a Changelog](https://keepachangelog.com/); the autopilot post-merge job prepends
-entries under **[Unreleased]** as PRs merge into `dev`.
+[Keep a Changelog](https://keepachangelog.com/); a pre-merge workflow
+(`.github/workflows/changelog.yml`) prepends each PR's entry under **[Unreleased]** on
+its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- test(e2e): JOURNEY-02 new patient → consultation → ordonnance → honoraire (+ fix #118) (#119, closes #118)
+- feat(skill): add /journey for scenario-driven E2E journeys (#117)
+- docs(e2e): scenario library (registry + journeys/ mirror) (#116)
+- ci(e2e): always report the e2e check on PRs so it can be required (#115)
 - fix(patients): surface the >100-char name error instead of silently capping (#114, closes #110)
 - fix(finance): reject whitespace-only charge description with 400 (#101) (#112, closes #101)
 - fix(forms): French native validation messages via reusable action (#104) (#111, closes #104)
