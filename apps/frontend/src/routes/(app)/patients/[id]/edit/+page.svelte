@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import Badge from '$lib/components/Badge.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -9,48 +10,57 @@
 
 	const p = data.patient;
 
-	let step = $state(1);
-	let loading = $state(false);
-	let errors = $state<Record<string, string>>({});
-
-	// Step 1 — Identité (prefilled from the existing dossier)
+	// ── Field state, prefilled from the existing dossier ──
 	let firstName = $state(p.firstName);
 	let lastName = $state(p.lastName);
 	let dateOfBirth = $state(p.dateOfBirth ?? '');
 	let gender = $state<'M' | 'F'>(p.gender);
 	let bloodGroup = $state(p.bloodGroup ?? '');
-
-	// Step 2 — Coordonnées
 	let phone = $state(p.phone);
 	let email = $state(p.email ?? '');
 	let address = $state(p.address ?? '');
 	let wilaya = $state(p.wilaya ?? '');
 	let emergencyContactName = $state(p.emergencyContactName ?? '');
 	let emergencyContactPhone = $state(p.emergencyContactPhone ?? '');
-
-	// Step 3 — Médical
-	let allergies = $state(p.allergies.join(', '));
-	let medicalHistory = $state(p.medicalHistory.join(', '));
+	const initAllergies = p.allergies.join(', ');
+	const initMedicalHistory = p.medicalHistory.join(', ');
+	let allergies = $state(initAllergies);
+	let medicalHistory = $state(initMedicalHistory);
 	let currentTreatment = $state(p.currentTreatment ?? '');
-
-	// Step 4 — Assurance
 	let nss = $state(p.nss ?? '');
 	let insuranceProvider = $state(p.insuranceProvider ?? '');
 	let mutualInsurance = $state(p.mutualInsurance ?? '');
 
-	const STEPS = [
-		{ num: 1, label: 'Identité', icon: 'user' },
-		{ num: 2, label: 'Coordonnées', icon: 'mapPin' },
-		{ num: 3, label: 'Médical', icon: 'stethoscope' },
-		{ num: 4, label: 'Assurance', icon: 'fileText' },
-	] as const;
+	let loading = $state(false);
+	let errors = $state<Record<string, string>>({});
 
-	const STEP_INFO: Record<number, { icon: string; title: string; subtitle: string }> = {
-		1: { icon: 'user', title: 'Identité', subtitle: "Informations d'identité du patient" },
-		2: { icon: 'mapPin', title: 'Coordonnées', subtitle: 'Numéros de contact et adresse' },
-		3: { icon: 'stethoscope', title: 'Médical', subtitle: 'Antécédents, allergies et traitement en cours' },
-		4: { icon: 'fileText', title: 'Assurance', subtitle: 'Numéro de sécurité sociale et couverture' },
-	};
+	// Unsaved-changes indicator in the action header.
+	const dirty = $derived(
+		firstName !== p.firstName ||
+			lastName !== p.lastName ||
+			dateOfBirth !== (p.dateOfBirth ?? '') ||
+			gender !== p.gender ||
+			bloodGroup !== (p.bloodGroup ?? '') ||
+			phone !== p.phone ||
+			email !== (p.email ?? '') ||
+			address !== (p.address ?? '') ||
+			wilaya !== (p.wilaya ?? '') ||
+			emergencyContactName !== (p.emergencyContactName ?? '') ||
+			emergencyContactPhone !== (p.emergencyContactPhone ?? '') ||
+			allergies !== initAllergies ||
+			medicalHistory !== initMedicalHistory ||
+			currentTreatment !== (p.currentTreatment ?? '') ||
+			nss !== (p.nss ?? '') ||
+			insuranceProvider !== (p.insuranceProvider ?? '') ||
+			mutualInsurance !== (p.mutualInsurance ?? '')
+	);
+
+	const SECTIONS = [
+		{ id: 'identite', label: 'Identité', icon: 'user', desc: 'Nom, naissance, groupe sanguin' },
+		{ id: 'coordonnees', label: 'Coordonnées', icon: 'mapPin', desc: 'Téléphone, adresse, urgence' },
+		{ id: 'medical', label: 'Médical', icon: 'stethoscope', desc: 'Allergies, antécédents, traitement' },
+		{ id: 'assurance', label: 'Assurance', icon: 'fileText', desc: 'NSS et couverture sociale' },
+	] as const;
 
 	const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -67,108 +77,81 @@
 	const WILAYAS = WILAYA_NAMES.map((name, i) => `${name} (${i + 1})`);
 
 	const INSURANCE_OPTIONS = [
-		{ value: 'CNAS', label: 'CNAS', description: "Caisse Nationale d'Assurances Sociales des Travailleurs Salariés" },
-		{ value: 'CASNOS', label: 'CASNOS', description: "Caisse d'Assurance Sociale des Non-Salariés" },
-		{ value: 'Military', label: 'Militaire / Sécurité', description: 'Couverture militaire ou forces de sécurité' },
-		{ value: 'None', label: 'Sans couverture', description: 'Patient sans assurance' },
+		{ value: 'CNAS', label: 'CNAS', desc: 'Travailleurs salariés' },
+		{ value: 'CASNOS', label: 'CASNOS', desc: 'Non-salariés' },
+		{ value: 'Military', label: 'Militaire', desc: 'Forces de sécurité' },
+		{ value: 'None', label: 'Sans couverture', desc: 'Patient non assuré' },
 	];
 
 	const today = new Date();
 	const maxDate = today.toISOString().slice(0, 10);
-	const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+	const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate())
+		.toISOString().slice(0, 10);
 
 	const age = $derived.by(() => {
-		if (!dateOfBirth) return 0;
+		if (!dateOfBirth) return p.age;
 		const dob = new Date(dateOfBirth);
-		if (Number.isNaN(dob.getTime())) return 0;
+		if (Number.isNaN(dob.getTime())) return p.age;
 		return Math.max(0, Math.floor((Date.now() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25)));
 	});
 
-	function formatDob(iso: string) {
-		if (!iso) return '—';
-		const [y, m, d] = iso.split('-');
-		return `${d}/${m}/${y}`;
-	}
-
-	// Latin letters, Arabic letters, spaces, hyphens, apostrophes
+	// ── Validation (runs on save; same rules as the create form) ──
 	const NAME_RE = /^[\p{L}\s'\-]{2,}$/u;
+	const PHONE_RE = /^0[5-7]\d{8}$/;
+	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	const NSS_RE = /^\d{15}$/;
 
-	const NAME_MAX = 100;
+	// Maps each error field to the section it lives in, so we can scroll to the first one.
+	const ERROR_SECTION: Record<string, string> = {
+		firstName: 'identite', lastName: 'identite', dateOfBirth: 'identite',
+		phone: 'coordonnees', email: 'coordonnees', emergencyContactPhone: 'coordonnees',
+		nss: 'assurance',
+	};
 
-	function validateStep1() {
+	function validate() {
 		const e: Record<string, string> = {};
 		const fn = firstName.trim();
 		const ln = lastName.trim();
-		if (!fn) {
-			e.firstName = 'Champ requis';
-		} else if (!NAME_RE.test(fn)) {
-			e.firstName = 'Lettres uniquement, 2 caractères minimum';
-		} else if (fn.length > NAME_MAX) {
-			e.firstName = '100 caractères maximum';
-		}
-		if (!ln) {
-			e.lastName = 'Champ requis';
-		} else if (!NAME_RE.test(ln)) {
-			e.lastName = 'Lettres uniquement, 2 caractères minimum';
-		} else if (ln.length > NAME_MAX) {
-			e.lastName = '100 caractères maximum';
-		}
-		if (!dateOfBirth) {
-			e.dateOfBirth = 'Date de naissance requise';
-		} else if (dateOfBirth > maxDate) {
-			e.dateOfBirth = 'La date ne peut pas être dans le futur';
-		} else if (dateOfBirth < minDate) {
-			e.dateOfBirth = 'Âge maximum 100 ans';
-		}
-		errors = e;
-		return Object.keys(e).length === 0;
-	}
-
-	const PHONE_RE = /^0[5-7]\d{8}$/;
-	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-	function validateStep2() {
-		const e: Record<string, string> = {};
+		if (!fn) e.firstName = 'Champ requis';
+		else if (!NAME_RE.test(fn)) e.firstName = 'Lettres uniquement, 2 caractères minimum';
+		else if (fn.length > 100) e.firstName = '100 caractères maximum';
+		if (!ln) e.lastName = 'Champ requis';
+		else if (!NAME_RE.test(ln)) e.lastName = 'Lettres uniquement, 2 caractères minimum';
+		else if (ln.length > 100) e.lastName = '100 caractères maximum';
+		if (!dateOfBirth) e.dateOfBirth = 'Date de naissance requise';
+		else if (dateOfBirth > maxDate) e.dateOfBirth = 'La date ne peut pas être dans le futur';
+		else if (dateOfBirth < minDate) e.dateOfBirth = 'Âge maximum 100 ans';
 		const ph = phone.trim();
-		if (!ph) {
-			e.phone = 'Champ requis';
-		} else if (!PHONE_RE.test(ph.replace(/\s/g, ''))) {
-			e.phone = 'Format invalide — ex: 0555 12 34 56';
-		}
+		if (!ph) e.phone = 'Champ requis';
+		else if (!PHONE_RE.test(ph.replace(/\s/g, ''))) e.phone = 'Format invalide — ex: 0555 12 34 56';
 		const ep = emergencyContactPhone.trim();
-		if (ep && !PHONE_RE.test(ep.replace(/\s/g, ''))) {
-			e.emergencyContactPhone = 'Format invalide — ex: 0555 12 34 56';
-		}
+		if (ep && !PHONE_RE.test(ep.replace(/\s/g, ''))) e.emergencyContactPhone = 'Format invalide — ex: 0555 12 34 56';
 		const em = email.trim();
-		if (em && !EMAIL_RE.test(em)) {
-			e.email = 'Adresse email invalide';
-		}
-		errors = e;
-		return Object.keys(e).length === 0;
-	}
-
-	const NSS_RE = /^\d{15}$/;
-
-	function validateStep4() {
-		const e: Record<string, string> = {};
+		if (em && !EMAIL_RE.test(em)) e.email = 'Adresse email invalide';
 		const n = nss.trim();
-		if (n && !NSS_RE.test(n)) {
-			e.nss = 'Le NSS doit contenir exactement 15 chiffres';
-		}
+		if (n && !NSS_RE.test(n)) e.nss = 'Le NSS doit contenir exactement 15 chiffres';
 		errors = e;
 		return Object.keys(e).length === 0;
 	}
 
-	function nextStep() {
-		if (step === 1 && !validateStep1()) return;
-		if (step === 2 && !validateStep2()) return;
-		errors = {};
-		step = Math.min(4, step + 1);
-	}
+	// ── Single-page scroll + section-nav active tracking ──
+	let scrollEl = $state<HTMLDivElement>();
+	const secEls: Record<string, HTMLElement> = {};
+	let active = $state<string>('identite');
 
-	function prevStep() {
-		errors = {};
-		step = Math.max(1, step - 1);
+	function onScroll() {
+		if (!scrollEl) return;
+		const top = scrollEl.scrollTop + 120;
+		let cur = SECTIONS[0].id;
+		for (const s of SECTIONS) {
+			const el = secEls[s.id];
+			if (el && el.offsetTop <= top) cur = s.id;
+		}
+		active = cur;
+	}
+	function jumpTo(id: string) {
+		const el = secEls[id];
+		if (scrollEl && el) scrollEl.scrollTo({ top: el.offsetTop - 16, behavior: 'smooth' });
 	}
 </script>
 
@@ -176,381 +159,367 @@
 	<title>Modifier · {p.firstName} {p.lastName}</title>
 </svelte:head>
 
-<div style="max-width:880px;margin:0 auto;padding:28px 24px 60px">
+<form
+	method="POST"
+	use:enhance={({ cancel }) => {
+		if (!validate()) {
+			// Invalid input never reaches the server; scroll to the first offending section.
+			const firstKey = Object.keys(errors)[0];
+			const sec = firstKey ? ERROR_SECTION[firstKey] : undefined;
+			if (sec) jumpTo(sec);
+			cancel();
+			return;
+		}
+		loading = true;
+		return async ({ result, update }) => {
+			loading = false;
+			// Success redirects to the dossier (toast fires there). A failed save returns here.
+			if (result.type === 'failure') {
+				const msg = (result.data?.error as string | undefined) ?? 'Échec de la mise à jour du patient.';
+				toast.error(msg);
+			} else if (result.type === 'error') {
+				toast.error('Échec de la mise à jour du patient.');
+			}
+			await update();
+		};
+	}}
+	style="display:flex;flex-direction:column;height:calc(100vh - 58px);background:var(--bg)"
+>
+	<!-- Custom controls (button groups) post their values via hidden inputs. -->
+	<input type="hidden" name="gender" value={gender} />
+	<input type="hidden" name="insuranceProvider" value={insuranceProvider} />
 
-	<!-- Page header -->
-	<div style="display:flex;align-items:center;gap:16px;margin-bottom:22px">
-		<a href="/patients/{p.id}" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);font-size:13.5px;font-weight:500">
-			<Icon name="chevronLeft" size={15} color="var(--text-muted)" />
-			Dossier
+	<!-- ── Sticky action header ── -->
+	<div style="flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,0.04);padding:13px 28px;display:flex;align-items:center;gap:16px">
+		<a href="/patients/{p.id}" style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 13px;text-decoration:none;font-family:inherit;font-size:13.5px;color:var(--text-muted);font-weight:500">
+			<Icon name="chevronLeft" size={15} color="var(--text-muted)" /> Retour au dossier
 		</a>
-		<div>
-			<h1 style="font-size:21px;font-weight:700;letter-spacing:-0.3px">Modifier le dossier</h1>
-			<p style="font-size:13.5px;color:var(--text-muted);margin-top:2px">{p.firstName} {p.lastName} · mise à jour des informations</p>
-		</div>
-	</div>
-
-	<!-- Stepper -->
-	<div class="card" style="padding:18px 22px;margin-bottom:18px">
-		<div style="display:flex;align-items:center">
-			{#each STEPS as s, i}
-				<div style="display:flex;align-items:center;gap:11px;{i < STEPS.length - 1 ? 'flex:1' : ''}">
-					<div class="step-circle {step > s.num ? 'done' : step === s.num ? 'active' : ''}">
-						{#if step > s.num}
-							<Icon name="check" size={16} color="white" />
-						{:else}
-							<Icon name={s.icon} size={16} color={step === s.num ? '#0F766E' : '#9CA3AF'} />
-						{/if}
-					</div>
-					<div style="flex-shrink:0">
-						<div style="font-size:10.5px;font-weight:700;letter-spacing:0.6px;color:{step === s.num ? '#0F766E' : 'var(--text-light)'}">ÉTAPE {s.num}</div>
-						<div style="font-size:14px;font-weight:{step === s.num ? '700' : '500'};color:{step >= s.num ? 'var(--text)' : 'var(--text-muted)'}">{s.label}</div>
-					</div>
-					{#if i < STEPS.length - 1}
-						<div class="step-connector {step > s.num ? 'done' : ''}" style="flex:1"></div>
-					{/if}
-				</div>
-			{/each}
-		</div>
-	</div>
-
-	<!-- Form error -->
-	{#if form?.error}
-		<div style="margin-bottom:16px;padding:12px 14px;background:#FEE2E2;border:1px solid #FECACA;border-radius:8px;font-size:13.5px;color:#DC2626;display:flex;align-items:center;gap:8px">
-			<Icon name="alertCircle" size={15} color="#DC2626" />
-			{form.error}
-		</div>
-	{/if}
-
-	<form
-		method="POST"
-		use:enhance={() => {
-			if (!validateStep4()) return () => {}; // abort submit
-			loading = true;
-			return async ({ result, update }) => {
-				loading = false;
-				// Success redirects to the dossier (toast fires there). A failed update returns
-				// here — surface the error as a toast in addition to the inline banner.
-				if (result.type === 'failure') {
-					const msg = (result.data?.error as string | undefined) ?? 'Échec de la mise à jour du patient.';
-					toast.error(msg);
-				} else if (result.type === 'error') {
-					toast.error('Échec de la mise à jour du patient.');
-				}
-				await update();
-			};
-		}}
-	>
-		<!-- Persist all field values across step transitions — only the active step's
-		     inputs are in the DOM, so hidden inputs carry the other steps' data. -->
-		<input type="hidden" name="firstName" value={firstName} />
-		<input type="hidden" name="lastName" value={lastName} />
-		<input type="hidden" name="dateOfBirth" value={dateOfBirth} />
-		<input type="hidden" name="gender" value={gender} />
-		<input type="hidden" name="bloodGroup" value={bloodGroup} />
-		<input type="hidden" name="phone" value={phone} />
-		<input type="hidden" name="email" value={email} />
-		<input type="hidden" name="address" value={address} />
-		<input type="hidden" name="wilaya" value={wilaya} />
-		<input type="hidden" name="emergencyContactName" value={emergencyContactName} />
-		<input type="hidden" name="emergencyContactPhone" value={emergencyContactPhone} />
-		<input type="hidden" name="allergies" value={allergies} />
-		<input type="hidden" name="medicalHistory" value={medicalHistory} />
-		<input type="hidden" name="currentTreatment" value={currentTreatment} />
-		<input type="hidden" name="nss" value={nss} />
-		<input type="hidden" name="insuranceProvider" value={insuranceProvider} />
-		<input type="hidden" name="mutualInsurance" value={mutualInsurance} />
-
-		<div class="card" style="overflow:hidden">
-
-			<!-- Section header -->
-			<div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px">
-				<div style="display:flex;align-items:center;gap:13px;min-width:0">
-					<div style="width:38px;height:38px;border-radius:9px;background:var(--primary-50);border:1px solid var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-						<Icon name={STEP_INFO[step].icon} size={17} color="var(--primary)" />
-					</div>
-					<div style="min-width:0">
-						<div style="font-size:15px;font-weight:700">{STEP_INFO[step].title}</div>
-						<div style="font-size:12.5px;color:var(--text-muted)">{STEP_INFO[step].subtitle}</div>
-					</div>
-				</div>
-				{#if firstName || lastName}
-					<div style="display:flex;align-items:center;gap:9px;flex-shrink:0">
-						<Avatar nom={lastName} prenom={firstName} sexe={gender} size={32} />
-						<div>
-							<div style="font-size:13px;font-weight:600;text-align:right">{firstName} {lastName}</div>
-							<div style="font-size:11.5px;color:var(--text-muted);text-align:right">{age} ans · {gender === 'F' ? 'Féminin' : 'Masculin'}</div>
-						</div>
-					</div>
-				{/if}
+		<div style="display:flex;align-items:center;gap:12px;min-width:0">
+			<Avatar nom={lastName} prenom={firstName} sexe={gender} size={40} />
+			<div style="min-width:0">
+				<h1 class="truncate" style="font-size:17px;font-weight:700;letter-spacing:-0.3px;line-height:1.2">
+					Modifier le dossier — {firstName} {lastName}
+				</h1>
+				<p style="font-size:12.5px;color:var(--text-muted)">
+					{age >= 0 && age < 130 ? `${age} ans · ` : ''}{gender === 'F' ? 'Femme' : 'Homme'} · Mise à jour de toutes les informations
+				</p>
 			</div>
+		</div>
 
-			<!-- Step content -->
-			<div style="padding:24px">
+		<div style="flex:1"></div>
 
-				{#if step === 1}
-					<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-						<div>
-							<label for="firstName" class="field-label" class:err={errors.firstName}>PRÉNOM *</label>
-							<input id="firstName" bind:value={firstName} placeholder="Ahmed" class="mk-input" class:input-err={errors.firstName} />
-							{#if errors.firstName}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.firstName}</p>{/if}
-						</div>
-						<div>
-							<label for="lastName" class="field-label" class:err={errors.lastName}>NOM *</label>
-							<input id="lastName" bind:value={lastName} placeholder="Benali" class="mk-input" class:input-err={errors.lastName} />
-							{#if errors.lastName}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.lastName}</p>{/if}
-						</div>
-						<div>
-							<label for="dateOfBirth" class="field-label" class:err={errors.dateOfBirth}>DATE DE NAISSANCE *</label>
-							<input id="dateOfBirth" type="date" bind:value={dateOfBirth} min={minDate} max={maxDate} class="mk-input" class:input-err={errors.dateOfBirth} />
-							{#if errors.dateOfBirth}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.dateOfBirth}</p>{/if}
-						</div>
-						<div>
-							<span class="field-label">SEXE</span>
-							<div style="display:flex;gap:10px">
-								<button type="button" class="seg-btn {gender === 'M' ? 'active' : ''}" onclick={() => gender = 'M'}>
-									<span class="radio-dot {gender === 'M' ? 'checked' : ''}"></span> Masculin
-								</button>
-								<button type="button" class="seg-btn {gender === 'F' ? 'active' : ''}" onclick={() => gender = 'F'}>
-									<span class="radio-dot {gender === 'F' ? 'checked' : ''}"></span> Féminin
-								</button>
-							</div>
-						</div>
-						<div>
-							<label for="bloodGroup" class="field-label">GROUPE SANGUIN</label>
-							<select id="bloodGroup" bind:value={bloodGroup} class="mk-input">
-								<option value="">Inconnu</option>
-								{#each BLOOD_GROUPS as bg}
-									<option value={bg}>{bg}</option>
-								{/each}
-							</select>
-						</div>
-						<div>
-							<span class="field-label">MÉDECIN RÉFÉRENT</span>
-							<input value="Dr. {data.doctorName} (par défaut)" disabled class="mk-input" style="color:var(--text-muted);background:var(--bg)" />
-						</div>
-					</div>
-				{/if}
-
-				{#if step === 2}
-					<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-						<div>
-							<label for="phone" class="field-label" class:err={errors.phone}>TÉLÉPHONE *</label>
-							<div style="position:relative">
-								<div class="field-icon"><Icon name="phone" size={14} color="#9CA3AF" /></div>
-								<input id="phone" bind:value={phone} placeholder="0555 XX XX XX" class="mk-input" class:input-err={errors.phone} style="padding-left:36px" />
-							</div>
-							{#if errors.phone}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.phone}</p>{/if}
-						</div>
-						<div>
-							<label for="email" class="field-label">EMAIL</label>
-							<div style="position:relative">
-								<div class="field-icon"><Icon name="mail" size={14} color="#9CA3AF" /></div>
-								<input id="email" type="email" bind:value={email} placeholder="patient@email.com" class="mk-input" class:input-err={errors.email} style="padding-left:36px" />
-							{#if errors.email}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.email}</p>{/if}
-							</div>
-						</div>
-						<div style="grid-column:1 / -1">
-							<label for="address" class="field-label">ADRESSE</label>
-							<input id="address" bind:value={address} placeholder="N°, Rue, Cité…" class="mk-input" />
-						</div>
-						<div>
-							<label for="wilaya" class="field-label">WILAYA</label>
-							<select id="wilaya" bind:value={wilaya} class="mk-input">
-								<option value="">Sélectionner…</option>
-								{#each WILAYAS as w}
-									<option value={w}>{w}</option>
-								{/each}
-							</select>
-						</div>
-					</div>
-
-					<div style="margin:22px 0 16px;padding-top:18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px">
-						<Icon name="alertCircle" size={14} color="var(--accent)" />
-						<span style="font-size:13px;font-weight:600;color:var(--text)">Contact en cas d'urgence</span>
-						<span style="font-size:12.5px;color:var(--text-muted)">(optionnel)</span>
-					</div>
-					<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-						<div>
-							<label for="emergencyContactName" class="field-label">NOM &amp; PRÉNOM</label>
-							<input id="emergencyContactName" bind:value={emergencyContactName} placeholder="Ex: Benali Fatima (épouse)" class="mk-input" />
-						</div>
-						<div>
-							<label for="emergencyContactPhone" class="field-label">TÉLÉPHONE URGENCE</label>
-							<div style="position:relative">
-								<div class="field-icon"><Icon name="phone" size={14} color="#9CA3AF" /></div>
-								<input id="emergencyContactPhone" bind:value={emergencyContactPhone} placeholder="0555 XX XX XX" class="mk-input" class:input-err={errors.emergencyContactPhone} style="padding-left:36px" />
-								{#if errors.emergencyContactPhone}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.emergencyContactPhone}</p>{/if}
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				{#if step === 3}
-					<div style="display:flex;gap:10px;padding:13px 16px;background:var(--danger-light);border:1px solid #FCA5A5;border-radius:8px;margin-bottom:20px">
-						<Icon name="alertCircle" size={16} color="var(--danger)" style="margin-top:1px" />
-						<p style="font-size:13px;color:#991B1B;line-height:1.55">
-							<strong>Important :</strong> Les allergies connues seront affichées en rouge sur chaque ordonnance pour éviter les prescriptions dangereuses.
-						</p>
-					</div>
-					<div style="display:flex;flex-direction:column;gap:18px">
-						<div>
-							<label for="allergies" class="field-label">ALLERGIES CONNUES</label>
-							<input id="allergies" bind:value={allergies} placeholder="Ex: Pénicilline, Aspirine, Codéine (séparer par virgule)" class="mk-input" />
-						</div>
-						<div>
-							<label for="medicalHistory" class="field-label">ANTÉCÉDENTS MÉDICAUX</label>
-							<textarea id="medicalHistory" bind:value={medicalHistory} rows="3" placeholder="Ex: Hypertension artérielle, Diabète type 2, Asthme… (séparer par virgule)" class="mk-input"></textarea>
-						</div>
-						<div>
-							<label for="currentTreatment" class="field-label">TRAITEMENT EN COURS</label>
-							<textarea id="currentTreatment" bind:value={currentTreatment} rows="3" placeholder="Médicaments pris régulièrement, posologies…" class="mk-input"></textarea>
-						</div>
-					</div>
-				{/if}
-
-				{#if step === 4}
-					<div style="display:flex;flex-direction:column;gap:20px">
-						<div>
-							<label for="nss" class="field-label">NUMÉRO DE SÉCURITÉ SOCIALE (NSS)</label>
-							<input id="nss" bind:value={nss} placeholder="Ex: 175031600012345" class="mk-input" class:input-err={errors.nss} />
-						{#if errors.nss}<p class="field-error"><Icon name="alertCircle" size={12} color="#DC2626" /> {errors.nss}</p>{/if}
-						</div>
-
-						<div>
-							<span class="field-label">COUVERTURE SOCIALE</span>
-							<div style="display:flex;flex-direction:column;gap:9px">
-								{#each INSURANCE_OPTIONS as opt}
-									<label class="insurance-card {insuranceProvider === opt.value ? 'active' : ''}">
-										<input type="radio" name="insuranceProvider" value={opt.value} bind:group={insuranceProvider} class="radio-dot {insuranceProvider === opt.value ? 'checked' : ''}" style="appearance:none;margin-top:2px" />
-										<div>
-											<div style="font-size:13.5px;font-weight:600;color:{insuranceProvider === opt.value ? 'var(--primary)' : 'var(--text)'}">{opt.label}</div>
-											<div style="font-size:12px;color:var(--text-muted);margin-top:1px">{opt.description}</div>
-										</div>
-									</label>
-								{/each}
-							</div>
-						</div>
-
-						<div>
-							<label for="mutualInsurance" class="field-label">MUTUELLE COMPLÉMENTAIRE (OPTIONNEL)</label>
-							<input id="mutualInsurance" bind:value={mutualInsurance} placeholder="Ex: GAM, AXA, CAAR…" class="mk-input" />
-						</div>
-
-						<!-- Récapitulatif -->
-						<div style="background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:16px 18px">
-							<p style="font-size:12.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Récapitulatif du dossier</p>
-							<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px">
-								<div class="recap-row"><span>Patient :</span><strong>{firstName || '—'} {lastName}</strong></div>
-								<div class="recap-row"><span>Date naissance :</span><strong>{formatDob(dateOfBirth)}</strong></div>
-								<div class="recap-row"><span>Sexe :</span><strong>{gender === 'F' ? 'Féminin' : 'Masculin'}</strong></div>
-								<div class="recap-row"><span>Groupe sanguin :</span><strong>{bloodGroup || 'Inconnu'}</strong></div>
-								<div class="recap-row"><span>Téléphone :</span><strong>{phone || '—'}</strong></div>
-								<div class="recap-row"><span>Wilaya :</span><strong>{wilaya || '—'}</strong></div>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-			</div>
-
-			<!-- Footer -->
-			<div style="padding:16px 22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-				{#if step > 1}
-					<button type="button" onclick={prevStep} style="display:flex;align-items:center;gap:6px;padding:9px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:500;color:var(--text);cursor:pointer">
-						<Icon name="chevronLeft" size={14} color="var(--text-muted)" /> Précédent
-					</button>
+		<div style="display:flex;align-items:center;gap:12px">
+			<span style="font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;color:{dirty ? 'var(--accent)' : 'var(--text-light)'}">
+				<span style="width:8px;height:8px;border-radius:50%;background:{dirty ? 'var(--accent)' : 'var(--border-strong)'}"></span>
+				{dirty ? 'Modifications non enregistrées' : 'Aucune modification'}
+			</span>
+			<a href="/patients/{p.id}" style="padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);text-decoration:none;font-family:inherit;font-size:13.5px;font-weight:500;color:var(--text)">
+				Annuler
+			</a>
+			<button type="submit" disabled={loading} style="display:flex;align-items:center;gap:8px;padding:10px 22px;border-radius:8px;border:none;font-family:inherit;font-size:14.5px;font-weight:700;background:{loading ? '#5BA8A2' : 'var(--primary)'};color:white;cursor:{loading ? 'not-allowed' : 'pointer'};box-shadow:0 3px 12px rgba(15,118,110,0.28)">
+				{#if loading}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="animation:spin 0.8s linear infinite">
+						<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+					</svg>
+					Enregistrement…
 				{:else}
-					<a href="/patients/{p.id}" style="display:flex;align-items:center;gap:6px;padding:9px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:500;color:var(--text);text-decoration:none;cursor:pointer">
+					<Icon name="check" size={17} color="white" /> Enregistrer les modifications
+				{/if}
+			</button>
+		</div>
+	</div>
+
+	<!-- ── Scrollable body ── -->
+	<div bind:this={scrollEl} onscroll={onScroll} style="flex:1;overflow:auto">
+		<div style="max-width:1040px;margin:0 auto;padding:24px 28px 80px;display:grid;grid-template-columns:212px 1fr;gap:28px;align-items:start">
+
+			<!-- Section nav (sticky, scroll-spy) -->
+			<aside style="position:sticky;top:0;display:flex;flex-direction:column;gap:4px">
+				{#each SECTIONS as s}
+					{@const on = active === s.id}
+					<button type="button" onclick={() => jumpTo(s.id)}
+						style="display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:11px 13px;border-radius:9px;cursor:pointer;font-family:inherit;transition:all .12s;border:1px solid {on ? 'var(--primary)' : 'transparent'};background:{on ? 'var(--surface)' : 'transparent'};box-shadow:{on ? '0 1px 4px rgba(0,0,0,0.05)' : 'none'}">
+						<div style="width:30px;height:30px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{on ? 'var(--primary)' : 'var(--surface)'};border:{on ? 'none' : '1px solid var(--border)'}">
+							<Icon name={s.icon} size={15} color={on ? 'white' : 'var(--text-muted)'} />
+						</div>
+						<div style="font-size:13.5px;font-weight:{on ? 700 : 500};color:{on ? 'var(--primary)' : 'var(--text)'}">{s.label}</div>
+					</button>
+				{/each}
+				<div style="margin-top:14px;padding:12px 14px;border-radius:9px;background:var(--primary-50);border:1px solid var(--primary-light)">
+					<div style="font-size:12px;color:var(--primary);font-weight:600;line-height:1.5">
+						Toutes les sections sont sur une seule page. Modifiez ce dont vous avez besoin, puis enregistrez.
+					</div>
+				</div>
+			</aside>
+
+			<!-- Sections -->
+			<div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+
+				<!-- IDENTITÉ -->
+				<div bind:this={secEls['identite']} class="card sec-card">
+					<div class="sec-head">
+						<div class="sec-icon"><Icon name="user" size={17} color="var(--primary)" /></div>
+						<div>
+							<div class="sec-title">{SECTIONS[0].label}</div>
+							<div class="sec-desc">{SECTIONS[0].desc}</div>
+						</div>
+					</div>
+					<div class="sec-body" style="display:flex;flex-direction:column;gap:18px">
+						<div class="grid-2">
+							<div>
+								<label for="firstName" class="fld-label" class:err={errors.firstName}>Prénom</label>
+								<input id="firstName" name="firstName" bind:value={firstName} class="mk-input" class:input-err={errors.firstName} />
+								{#if errors.firstName}<p class="fld-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {errors.firstName}</p>{/if}
+							</div>
+							<div>
+								<label for="lastName" class="fld-label" class:err={errors.lastName}>Nom</label>
+								<input id="lastName" name="lastName" bind:value={lastName} class="mk-input" class:input-err={errors.lastName} />
+								{#if errors.lastName}<p class="fld-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {errors.lastName}</p>{/if}
+							</div>
+						</div>
+						<div class="grid-2">
+							<div>
+								<label for="dateOfBirth" class="fld-label" class:err={errors.dateOfBirth}>Date de naissance</label>
+								<input id="dateOfBirth" name="dateOfBirth" type="date" bind:value={dateOfBirth} min={minDate} max={maxDate} class="mk-input" class:input-err={errors.dateOfBirth} />
+								{#if errors.dateOfBirth}<p class="fld-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {errors.dateOfBirth}</p>{/if}
+							</div>
+							<div>
+								<span class="fld-label">Sexe</span>
+								<div style="display:flex;gap:8px">
+									{#each [{ v: 'M', l: 'Masculin' }, { v: 'F', l: 'Féminin' }] as opt}
+										<button type="button" class="seg-btn {gender === opt.v ? 'active' : ''}" onclick={() => gender = opt.v as 'M' | 'F'}>
+											<span class="radio-dot {gender === opt.v ? 'checked' : ''}"></span> {opt.l}
+										</button>
+									{/each}
+								</div>
+							</div>
+						</div>
+						<div class="grid-2">
+							<div>
+								<label for="bloodGroup" class="fld-label">Groupe sanguin</label>
+								<select id="bloodGroup" name="bloodGroup" bind:value={bloodGroup} class="mk-input">
+									<option value="">Inconnu</option>
+									{#each BLOOD_GROUPS as bg}<option value={bg}>{bg}</option>{/each}
+								</select>
+							</div>
+							<div>
+								<span class="fld-label">Médecin référent</span>
+								<input value="Dr. {data.doctorName} (par défaut)" disabled class="mk-input" style="color:var(--text-muted);background:var(--bg)" />
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- COORDONNÉES -->
+				<div bind:this={secEls['coordonnees']} class="card sec-card">
+					<div class="sec-head">
+						<div class="sec-icon"><Icon name="mapPin" size={17} color="var(--primary)" /></div>
+						<div>
+							<div class="sec-title">{SECTIONS[1].label}</div>
+							<div class="sec-desc">{SECTIONS[1].desc}</div>
+						</div>
+					</div>
+					<div class="sec-body" style="display:flex;flex-direction:column;gap:18px">
+						<div class="grid-2">
+							<div>
+								<label for="phone" class="fld-label" class:err={errors.phone}>Téléphone</label>
+								<div style="position:relative">
+									<div class="fld-icon"><Icon name="phone" size={15} color="var(--text-muted)" /></div>
+									<input id="phone" name="phone" type="tel" bind:value={phone} class="mk-input" class:input-err={errors.phone} style="padding-left:40px" />
+								</div>
+								{#if errors.phone}<p class="fld-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {errors.phone}</p>{/if}
+							</div>
+							<div>
+								<label for="email" class="fld-label" class:err={errors.email}>Email</label>
+								<div style="position:relative">
+									<div class="fld-icon"><Icon name="mail" size={15} color="var(--text-muted)" /></div>
+									<input id="email" name="email" type="email" bind:value={email} placeholder="patient@email.com" class="mk-input" class:input-err={errors.email} style="padding-left:40px" />
+								</div>
+								{#if errors.email}<p class="fld-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {errors.email}</p>{/if}
+							</div>
+						</div>
+						<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+							<div>
+								<label for="address" class="fld-label">Adresse</label>
+								<input id="address" name="address" bind:value={address} placeholder="N°, Rue, Cité…" class="mk-input" />
+							</div>
+							<div>
+								<label for="wilaya" class="fld-label">Wilaya</label>
+								<select id="wilaya" name="wilaya" bind:value={wilaya} class="mk-input">
+									<option value="">Sélectionner…</option>
+									{#each WILAYAS as w}<option value={w}>{w}</option>{/each}
+								</select>
+							</div>
+						</div>
+						<div style="border-top:1px solid var(--border);padding-top:18px">
+							<div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+								<Icon name="alertCircle" size={15} color="var(--accent)" /> Contact en cas d'urgence
+								<span style="font-weight:400;font-size:12px;color:var(--text-muted)">(optionnel)</span>
+							</div>
+							<div class="grid-2">
+								<div>
+									<label for="emergencyContactName" class="fld-label">Nom &amp; prénom</label>
+									<input id="emergencyContactName" name="emergencyContactName" bind:value={emergencyContactName} placeholder="Ex : Benali Fatima (épouse)" class="mk-input" />
+								</div>
+								<div>
+									<label for="emergencyContactPhone" class="fld-label" class:err={errors.emergencyContactPhone}>Téléphone urgence</label>
+									<div style="position:relative">
+										<div class="fld-icon"><Icon name="phone" size={15} color="var(--text-muted)" /></div>
+										<input id="emergencyContactPhone" name="emergencyContactPhone" type="tel" bind:value={emergencyContactPhone} placeholder="0555 XX XX XX" class="mk-input" class:input-err={errors.emergencyContactPhone} style="padding-left:40px" />
+									</div>
+									{#if errors.emergencyContactPhone}<p class="fld-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {errors.emergencyContactPhone}</p>{/if}
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- MÉDICAL -->
+				<div bind:this={secEls['medical']} class="card sec-card">
+					<div class="sec-head">
+						<div class="sec-icon"><Icon name="stethoscope" size={17} color="var(--primary)" /></div>
+						<div>
+							<div class="sec-title">{SECTIONS[2].label}</div>
+							<div class="sec-desc">{SECTIONS[2].desc}</div>
+						</div>
+					</div>
+					<div class="sec-body" style="display:flex;flex-direction:column;gap:18px">
+						<div style="background:var(--danger-light);border:1px solid #FECACA;border-radius:9px;padding:11px 14px;display:flex;gap:10px">
+							<Icon name="alertCircle" size={15} color="var(--danger)" style="flex-shrink:0;margin-top:1px" />
+							<div style="font-size:12.5px;color:#991B1B;line-height:1.5">
+								Les allergies sont affichées en rouge sur chaque ordonnance pour éviter toute prescription dangereuse.
+							</div>
+						</div>
+						<div>
+							<label for="allergies" class="fld-label">Allergies connues <span class="fld-hint">séparées par une virgule</span></label>
+							<input id="allergies" name="allergies" bind:value={allergies} placeholder="Ex : Pénicilline, Aspirine, Codéine" class="mk-input" />
+							{#if allergies.trim()}
+								<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">
+									{#each allergies.split(',').map((a) => a.trim()).filter(Boolean) as a}<Badge variant="danger">{a}</Badge>{/each}
+								</div>
+							{/if}
+						</div>
+						<div>
+							<label for="medicalHistory" class="fld-label">Antécédents médicaux <span class="fld-hint">séparés par une virgule</span></label>
+							<textarea id="medicalHistory" name="medicalHistory" bind:value={medicalHistory} rows="2" placeholder="Ex : Hypertension artérielle, Diabète type 2, Asthme…" class="mk-input" style="resize:vertical;line-height:1.6"></textarea>
+							{#if medicalHistory.trim()}
+								<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">
+									{#each medicalHistory.split(',').map((a) => a.trim()).filter(Boolean) as a}<Badge variant="primary">{a}</Badge>{/each}
+								</div>
+							{/if}
+						</div>
+						<div>
+							<label for="currentTreatment" class="fld-label">Traitement en cours</label>
+							<textarea id="currentTreatment" name="currentTreatment" bind:value={currentTreatment} rows="3" placeholder="Médicaments pris régulièrement, posologies…" class="mk-input" style="resize:vertical;line-height:1.6"></textarea>
+						</div>
+					</div>
+				</div>
+
+				<!-- ASSURANCE -->
+				<div bind:this={secEls['assurance']} class="card sec-card">
+					<div class="sec-head">
+						<div class="sec-icon"><Icon name="fileText" size={17} color="var(--primary)" /></div>
+						<div>
+							<div class="sec-title">{SECTIONS[3].label}</div>
+							<div class="sec-desc">{SECTIONS[3].desc}</div>
+						</div>
+					</div>
+					<div class="sec-body" style="display:flex;flex-direction:column;gap:18px">
+						<div>
+							<label for="nss" class="fld-label" class:err={errors.nss}>Numéro de sécurité sociale (NSS)</label>
+							<input id="nss" name="nss" bind:value={nss} placeholder="Ex : 175031600012345" class="mk-input" class:input-err={errors.nss} />
+							{#if errors.nss}<p class="fld-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {errors.nss}</p>{/if}
+						</div>
+						<div>
+							<span class="fld-label">Couverture sociale</span>
+							<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+								{#each INSURANCE_OPTIONS as opt}
+									<button type="button" class="ins-card {insuranceProvider === opt.value ? 'active' : ''}" onclick={() => insuranceProvider = opt.value}>
+										<span class="radio-dot {insuranceProvider === opt.value ? 'checked' : ''}"></span>
+										<span>
+											<span style="display:block;font-size:14px;font-weight:{insuranceProvider === opt.value ? 700 : 500};color:{insuranceProvider === opt.value ? 'var(--primary)' : 'var(--text)'}">{opt.label}</span>
+											<span style="display:block;font-size:12px;color:var(--text-muted);margin-top:1px">{opt.desc}</span>
+										</span>
+									</button>
+								{/each}
+							</div>
+						</div>
+						<div>
+							<label for="mutualInsurance" class="fld-label">Mutuelle complémentaire <span class="fld-hint">optionnel</span></label>
+							<input id="mutualInsurance" name="mutualInsurance" bind:value={mutualInsurance} placeholder="Ex : GAM, AXA, CAAR…" class="mk-input" />
+						</div>
+					</div>
+				</div>
+
+				<!-- Bottom save (so the user doesn't need to scroll back up) -->
+				{#if form?.error}
+					<div style="padding:12px 14px;background:var(--danger-light);border:1px solid #FECACA;border-radius:8px;font-size:13.5px;color:var(--danger);display:flex;align-items:center;gap:8px">
+						<Icon name="alertCircle" size={15} color="var(--danger)" /> {form.error}
+					</div>
+				{/if}
+				<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:2px">
+					<a href="/patients/{p.id}" style="padding:11px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);text-decoration:none;font-family:inherit;font-size:14px;font-weight:500;color:var(--text)">
 						Annuler
 					</a>
-				{/if}
-
-				<div style="display:flex;align-items:center;gap:14px">
-					<span style="font-size:12.5px;color:var(--text-muted)">Étape {step} sur 4</span>
-					{#if step < 4}
-						<button type="button" onclick={nextStep} style="display:flex;align-items:center;gap:6px;padding:9px 18px;background:var(--primary);border:none;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;color:white;cursor:pointer">
-							Continuer <Icon name="chevronRight" size={14} color="white" />
-						</button>
-					{:else}
-						<button type="submit" disabled={loading} style="display:flex;align-items:center;gap:7px;padding:9px 18px;background:{loading ? '#5BA8A2' : 'var(--primary)'};border:none;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;color:white;cursor:{loading ? 'not-allowed' : 'pointer'}">
-							{#if loading}
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="animation:spin 0.8s linear infinite">
-									<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-								</svg>
-								Enregistrement…
-							{:else}
-								<Icon name="check" size={14} color="white" /> Enregistrer les modifications
-							{/if}
-						</button>
-					{/if}
+					<button type="submit" disabled={loading} style="display:flex;align-items:center;gap:8px;padding:11px 24px;border-radius:8px;border:none;font-family:inherit;font-size:14.5px;font-weight:700;background:{loading ? '#5BA8A2' : 'var(--primary)'};color:white;cursor:{loading ? 'not-allowed' : 'pointer'};box-shadow:0 3px 12px rgba(15,118,110,0.28)">
+						<Icon name="check" size={17} color="white" /> Enregistrer les modifications
+					</button>
 				</div>
 			</div>
 		</div>
-	</form>
-
-	<p style="text-align:center;margin-top:18px;font-size:12.5px;color:var(--text-muted);line-height:1.6;max-width:560px;margin-left:auto;margin-right:auto">
-		Les champs marqués <strong style="color:var(--danger)">*</strong> sont obligatoires.
-	</p>
-</div>
+	</div>
+</form>
 
 <style>
 	@keyframes spin { to { transform: rotate(360deg); } }
 
-	.field-label {
-		display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px;
-		color: var(--text-muted); text-transform: uppercase; margin-bottom: 7px;
+	.sec-card { padding: 0; overflow: hidden; scroll-margin-top: 16px; }
+	.sec-head {
+		padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg);
+		display: flex; align-items: center; gap: 12px;
 	}
-	.field-label.err { color: var(--danger); }
+	.sec-icon {
+		width: 36px; height: 36px; border-radius: 9px; background: var(--primary-50);
+		border: 1px solid var(--primary-light); display: flex; align-items: center; justify-content: center;
+	}
+	.sec-title { font-weight: 700; font-size: 15px; }
+	.sec-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 1px; }
+	.sec-body { padding: 22px 24px; }
 
-	.field-icon {
-		position: absolute; left: 11px; top: 50%; transform: translateY(-50%); pointer-events: none;
+	.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+	.fld-label {
+		display: block; font-size: 12px; font-weight: 600; color: var(--text-muted);
+		margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;
 	}
+	.fld-label.err { color: var(--danger); }
+	.fld-hint { font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; color: var(--text-light); }
+
+	.fld-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
 
 	.input-err { border-color: var(--danger) !important; background: var(--danger-light); }
 	.input-err:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.12) !important; }
 
-	.field-error {
-		display: flex; align-items: center; gap: 5px;
-		font-size: 12px; color: var(--danger); margin-top: 6px;
-	}
-
-	.step-circle {
-		width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
-		display: flex; align-items: center; justify-content: center;
-		background: var(--bg); border: 2px solid var(--border);
-	}
-	.step-circle.active { background: var(--primary-50); border-color: var(--primary); }
-	.step-circle.done { background: var(--primary); border-color: var(--primary); }
-
-	.step-connector { height: 2px; background: var(--border); margin: 0 14px; min-width: 30px; }
-	.step-connector.done { background: var(--primary); }
+	.fld-error { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--danger); margin-top: 6px; }
 
 	.seg-btn {
-		display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center;
-		padding: 10px 16px; border-radius: 8px; cursor: pointer; font-family: inherit;
-		font-size: 13.5px; font-weight: 500; color: var(--text-muted);
-		background: var(--surface); border: 1.5px solid var(--border); transition: all 0.12s;
+		display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1;
+		padding: 10px 14px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 14px;
+		color: var(--text); background: white; border: 1.5px solid var(--border); transition: all 0.12s;
 	}
 	.seg-btn.active { color: var(--primary); border-color: var(--primary); background: var(--primary-50); font-weight: 600; }
 
 	.radio-dot {
-		width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+		width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0;
 		border: 2px solid var(--border-strong); background: white; display: inline-block; position: relative;
 	}
 	.radio-dot.checked { border-color: var(--primary); }
-	.radio-dot.checked::after {
-		content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--primary);
-	}
+	.radio-dot.checked::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--primary); }
 
-	.insurance-card {
-		display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px;
-		border: 1.5px solid var(--border); border-radius: 9px; cursor: pointer; transition: all 0.12s;
+	.ins-card {
+		display: flex; align-items: center; gap: 11px; padding: 12px 15px; border-radius: 9px;
+		cursor: pointer; text-align: left; font-family: inherit;
+		border: 1.5px solid var(--border); background: white; transition: all 0.12s;
 	}
-	.insurance-card.active { border-color: var(--primary); background: var(--primary-50); }
-	.insurance-card input[type="radio"] { cursor: pointer; }
-
-	.recap-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
-	.recap-row span { color: var(--text-muted); }
-	.recap-row strong { font-weight: 600; text-align: right; }
+	.ins-card.active { border-color: var(--primary); background: var(--primary-50); }
 </style>
