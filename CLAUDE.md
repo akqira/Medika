@@ -33,6 +33,14 @@ Wait for both servers to print their "ready" lines before opening the browser.
 
 Never run `dotnet build` while Visual Studio has the backend open — DLLs are locked and the build will fail with MSB3027 errors. Use VS hot-reload or restart the project instead.
 
+**Stop the user's local servers before issue work that needs screenshots.** When fixing
+an issue where you'll switch branches and capture screenshots, first **stop the user's
+running dev servers** (frontend `:5000`, backend `:5100`) and run your own throwaway
+instances on the branch under test — then stop them when done. Switching branches under a
+running Vite dev server corrupts its `.svelte-kit/types` and makes every route return 500
+(recover with: kill the `:5000` process → `pnpm dev` → `pnpm exec svelte-kit sync`). Don't
+silently take over a server the user is watching — say you're doing it.
+
 ### Task sequencing
 
 - Fix bugs **before** adding features or setting up infrastructure.
