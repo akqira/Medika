@@ -31,6 +31,7 @@
 2. **Ordonnance générée côté serveur** — en-tête configurable par cabinet dès le départ.
 3. **Modèle finance pensé pour l'agrégation** — paiements et dépenses dans leurs propres collections, pas en embarqué.
 4. **Liste patients paginée côté serveur** dès la refonte — ne jamais charger tout le jeu de données (contrainte bas débit Algérie).
+5. **QA automatisée en continu** — l'agent `/qa-sweep` (skill + sous-agent `qa-explorer`) et un cron GitHub Actions nocturne testent le frontend comme un vrai utilisateur (négatif / non-mutant) et ouvrent des issues `status:needs-triage`. Catalogue des contrôles : `docs/qa/check-catalog.md`.
 
 ---
 
