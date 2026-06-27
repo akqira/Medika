@@ -6,6 +6,7 @@ All notable changes to Medika are documented here. Format follows
 its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- feat(patients): make all patient dossier fields editable (#126) (#132, closes #126)
 - feat(notifications): port eGestion Toaster + wire success/error toasts (#129) (#130, closes #129)
 - docs(changelog): backfill #121 entry (#123)
 - test(e2e): reuse authenticated session across specs (fix cold-start login burn) (#121)
