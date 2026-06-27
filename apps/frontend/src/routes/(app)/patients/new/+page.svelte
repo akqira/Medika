@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -220,8 +221,16 @@
 		use:enhance={() => {
 			if (!validateStep4()) return () => {}; // abort submit
 			loading = true;
-			return async ({ update }) => {
+			return async ({ result, update }) => {
 				loading = false;
+				// Success redirects to /patients (toast fires there). A failed create returns
+				// here — surface the error as a toast in addition to the inline banner (#129).
+				if (result.type === 'failure') {
+					const msg = (result.data?.error as string | undefined) ?? 'Échec de la création du patient.';
+					toast.error(msg);
+				} else if (result.type === 'error') {
+					toast.error('Échec de la création du patient.');
+				}
 				await update();
 			};
 		}}

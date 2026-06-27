@@ -1,11 +1,33 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { goto, replaceState } from '$app/navigation';
+	import { page as pageState } from '$app/state';
 	import type { PageData } from './$types';
 	import type { PatientSummary, PagedResult } from '$lib/types/api';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	// Issue #129 — success notifications. The patient-new and consultation-save server
+	// actions redirect here with `?toast=…`; surface the matching toast once on mount,
+	// then strip the param so a refresh/back doesn't re-fire it. onMount (not $effect)
+	// guarantees a single fire — a reactive effect would re-run and loop on the param.
+	const TOAST_MESSAGES: Record<string, string> = {
+		'patient-created': 'Patient créé avec succès.',
+		'consultation-saved': 'Consultation enregistrée avec succès.',
+	};
+	onMount(() => {
+		const kind = pageState.url.searchParams.get('toast');
+		const message = kind && TOAST_MESSAGES[kind];
+		if (!message) return;
+		toast.success(message);
+		// Strip only our own param; `created` is an existing signal other code/tests rely on.
+		const url = new URL(pageState.url);
+		url.searchParams.delete('toast');
+		replaceState(url, {});
+	});
 
 	const PAGE_SIZE = 20;
 
