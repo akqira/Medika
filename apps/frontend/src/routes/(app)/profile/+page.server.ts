@@ -58,7 +58,6 @@ export const actions: Actions = {
 			await api.patch('/api/profile/cabinet', {
 				cabinetName:    data.get('cabinetName'),
 				cabinetAddress: data.get('cabinetAddress'),
-				cabinetCity:    data.get('cabinetCity'),
 				cabinetWilaya:  data.get('cabinetWilaya'),
 				cabinetPhone:   data.get('cabinetPhone'),
 				specialty:      data.get('specialty'),

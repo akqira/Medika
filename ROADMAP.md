@@ -14,14 +14,14 @@
 
 | Phase | Statut | Détail |
 |---|---|---|
-| 0 · Pré-lancement (login, dashboard, légal, e-mail) | ✅ — reliquat : recherche navbar à câbler | [milestone](https://github.com/akqira/Medika/milestone/7) |
+| 0 · Pré-lancement (login, dashboard, légal, e-mail) | ✅ — recherche navbar câblée (#54) | [milestone](https://github.com/akqira/Medika/milestone/7) |
 | 1 · Refonte Fiche Patient | ✅ — validation design Kader en attente | [milestone](https://github.com/akqira/Medika/milestone/8) |
 | 2 · Agenda | 🟡 En cours (drag-to-reschedule, vues jour/mois, timeline 07:00) | [milestone](https://github.com/akqira/Medika/milestone/9) |
 | 3 · Consultation & Ordonnance | ✅ Terminée | [milestone](https://github.com/akqira/Medika/milestone/10) |
 | 4 · Finances | ✅ — export comptable PDF/Excel ⏸️ reporté | [milestone](https://github.com/akqira/Medika/milestone/11) |
 | Backlog — Plus tard | ⬜ Versements partiels, self-booking, multi-cabinet, rôles | [milestone](https://github.com/akqira/Medika/milestone/12) |
 
-**Phases 0 à 4 livrées et vérifiées** (tests unitaires .NET + e2e Playwright au vert en CI, déployées sur `dev`). Reste non bloquant : validation visuelle dossier patient, branchement vitest front en CI, mise en prod `dev → main`. Décisions ouvertes : `docs/Kaki/Feedback-Analyse.md`.
+**Phases 0 à 4 livrées et vérifiées** (tests unitaires .NET + e2e Playwright + vitest front au vert en CI). **Première mise en production `dev → main` livrée — [v0.1.0](https://github.com/akqira/Medika/releases/tag/v0.1.0)** (#60). Reste non bloquant : validation visuelle dossier patient. Décisions ouvertes : `docs/Kaki/Feedback-Analyse.md`.
 
 ---
 
