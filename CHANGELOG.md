@@ -6,6 +6,7 @@ All notable changes to Medika are documented here. Format follows
 its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- feat(consultation): new MediKa brand design + dedicated ordonnance window (#135) (#137, closes #135)
 - feat(patients): make the patient dossier editable (#126) (#131, closes #126)
 - feat(notifications): port eGestion Toaster + wire success/error toasts (#129) (#130, closes #129)
 - docs(changelog): backfill #121 entry (#123)
