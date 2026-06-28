@@ -98,31 +98,39 @@ test('JOURNEY-02 — register a patient, consult, prescribe two meds, bill 2 000
 		}).toPass({ timeout: 30000 });
 
 		// ── 4. Motif/symptômes + diagnostic ─────────────────────────────────────
-		await page.getByPlaceholder('Motif…').fill(MOTIF);
+		await page.getByPlaceholder('Saisissez le motif…').fill(MOTIF);
 
 		await page.getByRole('tab', { name: 'Diagnostic' }).click();
-		const diagnosis = page.getByPlaceholder('Diagnostic principal…');
+		const diagnosis = page.getByPlaceholder('Diagnostic retenu…');
 		await expect(diagnosis).toBeVisible();
 		await diagnosis.fill(DIAGNOSTIC);
 
-		// ── 5. Ordonnance — deux médicaments ────────────────────────────────────
-		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
-		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
-		await expect(page.getByText('2 médicaments', { exact: true })).toBeVisible();
+		// ── 5. Ordonnance — deux médicaments (fenêtre dédiée, nouveau design) ────
+		// L'ordonnance vit désormais dans une fenêtre plein écran pilotée par la
+		// recherche : on ouvre la fenêtre, on ajoute deux lignes depuis le catalogue,
+		// puis on précise nom + posologie dans le panneau éditable de droite.
+		await page.getByRole('button', { name: 'Créer une ordonnance', exact: true }).click();
+		await expect(page.getByRole('dialog', { name: 'Nouvelle ordonnance' })).toBeVisible();
 
-		const cards = page.locator('.med-card');
+		// Deux clics sur le catalogue créent deux lignes éditables.
+		await page.getByRole('button', { name: /PARACÉTAMOL 500mg/ }).first().click();
+		await page.getByRole('button', { name: /OMÉPRAZOLE/ }).first().click();
+
+		const medNames = page.getByRole('textbox', { name: 'Nom + dosage' });
+		const medPosos = page.getByPlaceholder('Posologie (ex. 1-0-1-0 ou 1 comprimé matin et soir)');
+		await expect(medNames).toHaveCount(2);
 		for (const [i, med] of [MED_1, MED_2].entries()) {
-			const card = cards.nth(i);
-			// Le nom est un combobox texte-libre : on tape la valeur puis on ferme la
-			// liste déroulante (Escape) pour qu'elle n'intercepte pas le clic suivant.
-			await card.getByRole('combobox').fill(med.name);
-			await card.getByRole('combobox').press('Escape');
-			await card.getByPlaceholder('1-0-1-0 ou texte libre').fill(med.poso);
+			await medNames.nth(i).fill(med.name);
+			await medPosos.nth(i).fill(med.poso);
 		}
+
+		// Retour à la consultation — les lignes restent en mémoire.
+		await page.getByRole('button', { name: 'Retour' }).click();
+		await expect(page.getByText('Ordonnance prête')).toBeVisible();
 
 		// ── 6. Honoraire 2 000 DA + enregistrement (finalize) ───────────────────
 		await page.locator('#tariff').fill(String(HONORAIRE));
-		await page.getByRole('button', { name: 'Enregistrer la consultation' }).click();
+		await page.getByRole('button', { name: /Enregistrer & encaisser/ }).click();
 
 		// Enregistrement OK → redirection vers /patients?created=<consultationId>.
 		await expect(page).toHaveURL(/\/patients\?created=/);
