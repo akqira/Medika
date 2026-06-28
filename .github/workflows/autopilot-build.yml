@@ -5,6 +5,10 @@ name: Autopilot — Build
 # then captures a screenshot of the feature and emails Kader a summary.
 #
 # It NEVER merges. Kader reviews and merges every PR. See docs/setup/autopilot.md.
+#
+# OPT-OUT: add the `autopilot:skip` label to an issue you intend to implement
+# yourself — the guard below then ignores status:in-progress, so the autopilot
+# won't race you with a competing PR.
 
 on:
   issues:
@@ -17,8 +21,11 @@ concurrency:
 
 jobs:
   guard:
-    # Only proceed for the status:in-progress label. Keeps the rest of the matrix cheap.
-    if: github.event.label.name == 'status:in-progress'
+    # Only proceed for the status:in-progress label, and never when the issue is
+    # marked autopilot:skip (a human is implementing it). Keeps the matrix cheap.
+    if: >-
+      github.event.label.name == 'status:in-progress' &&
+      !contains(github.event.issue.labels.*.name, 'autopilot:skip')
     runs-on: ubuntu-latest
     outputs:
       proceed: ${{ steps.check.outputs.proceed }}
