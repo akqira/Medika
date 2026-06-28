@@ -21,4 +21,4 @@ public record VitalSignsDto(
 
 public record PrescriptionLineDto(
     string Medication, string Dosage,
-    string? Duration, int Quantity, string? Frequency = null);
+    string? Duration, string? Frequency = null);

@@ -85,7 +85,6 @@ export interface PrescriptionLine {
 	dosage: string;
 	frequency: string;
 	duration: string;
-	quantity: number;
 }
 
 export interface VitalSigns {

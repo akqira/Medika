@@ -119,10 +119,6 @@ public sealed class PrescriptionPdfGenerator : IPrescriptionPdfGenerator
 
                             if (!string.IsNullOrWhiteSpace(posology))
                                 med.Item().Text(posology).FontSize(10).FontColor(Colors.Grey.Darken2);
-
-                            if (line.Quantity > 0)
-                                med.Item().Text($"Quantité : {line.Quantity} boîte{(line.Quantity > 1 ? "s" : "")}")
-                                    .FontSize(9).FontColor(Muted);
                         });
                     });
 

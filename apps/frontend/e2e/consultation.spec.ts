@@ -135,6 +135,19 @@ test.describe('Consultation — ordonnance window', () => {
 		await expect(page.getByRole('button', { name: "Imprimer l'ordonnance" }).first()).toBeEnabled();
 	});
 
+	test('the prescription line exposes no quantity (boîtes) field (issue #125)', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
+
+		// The line is present (name + posology), but the old "Quantité (boîtes)"
+		// stepper — the only number input inside the ordonnance window — must be
+		// gone. Scope to the dialog so the page's Taille / honoraires number
+		// inputs behind the modal don't false-positive.
+		const dialog = page.getByRole('dialog', { name: 'Nouvelle ordonnance' });
+		await expect(dialog.getByRole('textbox', { name: 'Nom + dosage' })).toBeVisible();
+		await expect(dialog.getByRole('spinbutton')).toHaveCount(0);
+	});
+
 	test('a 1-0-1-0 posology expands to readable moments on blur', async ({ page }) => {
 		await openOrdonnance(page);
 		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();

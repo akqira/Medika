@@ -54,7 +54,7 @@ public class SaveConsultationHandler(
         consultation.ClearPrescription();
         foreach (var line in cmd.Prescription)
             consultation.AddPrescriptionLine(
-                new PrescriptionLine(line.Medication, line.Dosage, line.Duration, line.Quantity, line.Frequency));
+                new PrescriptionLine(line.Medication, line.Dosage, line.Duration, line.Frequency));
 
         consultation.SetTariff(cmd.Tariff);
 

@@ -70,7 +70,7 @@ public class GeneratePrescriptionPdfEndpoint : Endpoint<GeneratePrescriptionPdfR
             new PatientHeader($"{patient.FirstName} {patient.LastName}", patient.Age, patient.Gender),
             consultation.Date,
             consultation.Prescription
-                .Select(p => new PrescriptionPdfLine(p.Medication, p.Dosage, p.Frequency, p.Duration, p.Quantity))
+                .Select(p => new PrescriptionPdfLine(p.Medication, p.Dosage, p.Frequency, p.Duration))
                 .ToList());
 
         var bytes = PdfGenerator.Generate(model);

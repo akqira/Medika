@@ -64,11 +64,11 @@
 
 	function pickCatalog(d: CatalogMed) {
 		if (isCatAdded(d)) return;
-		addMed({ medication: catLabel(d), dosage: d.pos, duration: d.duree, quantity: 1 });
+		addMed({ medication: catLabel(d), dosage: d.pos, duration: d.duree });
 	}
 	function pickFree(name: string) {
 		if (isFreeAdded(name)) return;
-		addMed({ medication: name, quantity: 1 });
+		addMed({ medication: name });
 	}
 
 	function onKeydown(e: KeyboardEvent) {
@@ -246,21 +246,12 @@
 								placeholder="Posologie (ex. 1-0-1-0 ou 1 comprimé matin et soir)"
 								title="Posologie — tapez 1-0-1-0 (matin-midi-soir-coucher) ou du texte libre"
 							/>
-							<div class="ed-row">
-								<input
-									class="ed-input"
-									value={med.duration}
-									oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}
-									placeholder="Durée"
-								/>
-								<input
-									class="ed-input ed-qty"
-									type="number"
-									min="1"
-									value={med.quantity}
-									oninput={(e) => updateMed(med.id, 'quantity', Number((e.target as HTMLInputElement).value) || 1)}
-								/>
-							</div>
+							<input
+								class="ed-input"
+								value={med.duration}
+								oninput={(e) => updateMed(med.id, 'duration', (e.target as HTMLInputElement).value)}
+								placeholder="Durée"
+							/>
 						</div>
 					{/each}
 				{/if}
@@ -646,15 +637,6 @@
 	.ed-input-strong {
 		font-weight: 700;
 	}
-	.ed-row {
-		display: grid;
-		grid-template-columns: 1fr 72px;
-		gap: 7px;
-	}
-	.ed-qty {
-		text-align: center;
-	}
-
 	.ow-panel-foot {
 		flex-shrink: 0;
 		border-top: 1px solid var(--border);

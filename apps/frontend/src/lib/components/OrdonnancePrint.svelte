@@ -85,10 +85,8 @@
 								{#if med.dosage.trim()}
 									<div class="rx-pos">{med.dosage}</div>
 								{/if}
-								{#if med.duration.trim() || med.quantity}
-									<div class="rx-meta">
-										{#if med.duration.trim()}Durée&nbsp;: {med.duration}{/if}{#if med.duration.trim() && med.quantity}{' · '}{/if}{#if med.quantity}Qté&nbsp;: {med.quantity} boîte{med.quantity > 1 ? 's' : ''}{/if}
-									</div>
+								{#if med.duration.trim()}
+									<div class="rx-meta">Durée&nbsp;: {med.duration}</div>
 								{/if}
 							</div>
 						</div>
