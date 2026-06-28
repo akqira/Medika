@@ -65,5 +65,4 @@ public record PrescriptionLineDetail(
     string Medication,
     string Dosage,
     string? Duration,
-    int Quantity,
     string? Frequency);

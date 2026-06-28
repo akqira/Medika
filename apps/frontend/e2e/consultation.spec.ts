@@ -135,6 +135,16 @@ test.describe('Consultation — ordonnance window', () => {
 		await expect(page.getByRole('button', { name: "Imprimer l'ordonnance" }).first()).toBeEnabled();
 	});
 
+	test('the prescription line exposes no quantity (boîtes) field (issue #125)', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
+
+		// The line is present (name + posology), but the old "Quantité (boîtes)"
+		// stepper — the only number input in the editor — must be gone.
+		await expect(page.getByRole('textbox', { name: 'Nom + dosage' })).toBeVisible();
+		await expect(page.getByRole('spinbutton')).toHaveCount(0);
+	});
+
 	test('a 1-0-1-0 posology expands to readable moments on blur', async ({ page }) => {
 		await openOrdonnance(page);
 		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();

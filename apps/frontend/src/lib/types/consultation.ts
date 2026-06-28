@@ -6,14 +6,12 @@
 //   dosage     → posologie (texte libre ou code 1-0-1-0 développé)
 //   frequency  → réservé (non édité dans l'UI actuelle)
 //   duration   → durée du traitement
-//   quantity   → nombre de boîtes
 export type Med = {
 	id: number;
 	medication: string;
 	dosage: string;
 	frequency: string;
 	duration: string;
-	quantity: number;
 };
 
 /** Métadonnées patient nécessaires à l'en-tête de la fenêtre et à l'impression. */

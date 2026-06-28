@@ -44,7 +44,7 @@ public class GetConsultationDetailEndpoint : Endpoint<GetConsultationDetailReque
             : null;
 
         var prescription = consultation.Prescription
-            .Select(p => new PrescriptionLineDetail(p.Medication, p.Dosage, p.Duration, p.Quantity, p.Frequency))
+            .Select(p => new PrescriptionLineDetail(p.Medication, p.Dosage, p.Duration, p.Frequency))
             .ToList();
 
         var detail = new ConsultationDetail(

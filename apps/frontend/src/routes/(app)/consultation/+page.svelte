@@ -215,7 +215,7 @@
 	function addMed(init: Partial<Med> = {}) {
 		medications = [
 			...medications,
-			{ id: nextId, medication: '', dosage: '', frequency: '', duration: '', quantity: 1, ...init }
+			{ id: nextId, medication: '', dosage: '', frequency: '', duration: '', ...init }
 		];
 		nextId++;
 	}
@@ -253,12 +253,11 @@
 
 	const prescriptionJson = $derived(
 		JSON.stringify(
-			medications.map(({ medication, dosage, frequency, duration, quantity }) => ({
+			medications.map(({ medication, dosage, frequency, duration }) => ({
 				medication,
 				dosage,
 				frequency,
-				duration,
-				quantity
+				duration
 			}))
 		)
 	);
