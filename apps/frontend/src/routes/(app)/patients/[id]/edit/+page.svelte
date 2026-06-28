@@ -142,7 +142,7 @@
 	function onScroll() {
 		if (!scrollEl) return;
 		const top = scrollEl.scrollTop + 120;
-		let cur = SECTIONS[0].id;
+		let cur: string = SECTIONS[0].id;
 		for (const s of SECTIONS) {
 			const el = secEls[s.id];
 			if (el && el.offsetTop <= top) cur = s.id;
