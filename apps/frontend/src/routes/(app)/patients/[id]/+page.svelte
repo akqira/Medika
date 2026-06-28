@@ -1,16 +1,29 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { invalidateAll, replaceState } from '$app/navigation';
+	import { page as pageState } from '$app/state';
 	import type { PageData } from './$types';
 	import type { ConsultationDetail, PatientInvoice } from '$lib/types/api';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	const patient = $derived(data.patient);
 	const consultations = $derived(data.consultations);
 	const invoices = $derived(data.invoices);
+
+	// The edit action redirects back here with `?toast=patient-updated` — surface the
+	// confirmation once on mount, then strip the param so refresh/back doesn't re-fire it.
+	onMount(() => {
+		if (pageState.url.searchParams.get('toast') !== 'patient-updated') return;
+		toast.success('Dossier patient mis à jour.');
+		const url = new URL(pageState.url);
+		url.searchParams.delete('toast');
+		replaceState(url, {});
+	});
 
 	const fmt = new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 });
 
@@ -129,11 +142,18 @@
 		<a href="/patients" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);text-decoration:none">
 			← Retour aux patients
 		</a>
-		<a href="/consultation?patientId={patient.id}"
-			style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-size:13.5px;font-weight:600">
-			<Icon name="stethoscope" size={15} color="white" />
-			Ajouter une consultation
-		</a>
+		<div style="display:inline-flex;align-items:center;gap:10px">
+			<a href="/patients/{patient.id}/edit"
+				style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;text-decoration:none;font-size:13.5px;font-weight:600">
+				<Icon name="edit" size={15} color="var(--text-muted)" />
+				Modifier
+			</a>
+			<a href="/consultation?patientId={patient.id}"
+				style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-size:13.5px;font-weight:600">
+				<Icon name="stethoscope" size={15} color="white" />
+				Ajouter une consultation
+			</a>
+		</div>
 	</div>
 
 	<!-- Dossier: 2 columns -->
