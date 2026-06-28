@@ -7,13 +7,30 @@ import { login } from './helpers';
 // keypress can race the listener attach and be lost. Focusing a real form input
 // first is a user gesture that guarantees the client is interactive.
 async function ensureHydrated(page: Page) {
-	await page.getByPlaceholder('Motif…').click();
+	await page.getByPlaceholder('Saisissez le motif…').click();
 }
 
-// Scenario 4 / 5 — Consultation & ordonnance (redesigned cockpit, issue #79).
-// Saving is a single fast action ("Enregistrer la consultation"): client-side
+// Selects the first real patient (option 0 is the "— Sélectionner —" placeholder).
+// Hydrate first: selectOption before the client binds would set the native value
+// without updating Svelte state, leaving the ordonnance CTA stuck disabled.
+async function selectFirstPatient(page: Page) {
+	await ensureHydrated(page);
+	await page.locator("select[aria-label='Patient']").selectOption({ index: 1 });
+	// The CTA flips enabled once selectedPatient is set — wait for it.
+	await expect(page.getByRole('button', { name: 'Créer une ordonnance', exact: true })).toBeEnabled();
+}
+
+// Opens the dedicated ordonnance window (search-driven, new MediKa brand design).
+async function openOrdonnance(page: Page) {
+	await page.getByRole('button', { name: 'Créer une ordonnance', exact: true }).click();
+	await expect(page.getByRole('dialog', { name: 'Nouvelle ordonnance' })).toBeVisible();
+}
+
+// Scenario 4 / 5 — Consultation & ordonnance (new brand design, issue #135).
+// Saving is a single fast action ("Enregistrer & encaisser …"): client-side
 // validation blocks an incomplete consultation inline (no native confirm dialog),
-// and the server still guards the no-patient case as a backstop.
+// and the server still guards the no-patient case as a backstop. The ordonnance
+// now lives in a dedicated full-screen, search-driven window.
 
 test.describe('Consultation — save failures', () => {
 	test.beforeEach(async ({ page }) => {
@@ -23,7 +40,7 @@ test.describe('Consultation — save failures', () => {
 	});
 
 	test('saving with no patient is blocked inline before reaching the server', async ({ page }) => {
-		await page.getByRole('button', { name: 'Enregistrer la consultation' }).click();
+		await page.getByRole('button', { name: /Enregistrer & encaisser/ }).click();
 		// Inline, UI-styled validation message — no dialog, no navigation.
 		await expect(page.getByText('Sélectionnez un patient')).toBeVisible();
 		await expect(page).toHaveURL(/\/consultation/);
@@ -35,17 +52,9 @@ test.describe('Consultation — save failures', () => {
 		await expect(page.getByText('Sélectionnez un patient')).toBeVisible();
 		await expect(page).toHaveURL(/\/consultation/);
 	});
-
-	test('adding then removing a medication line leaves an empty ordonnance', async ({ page }) => {
-		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
-		await expect(page.getByText('1 médicament', { exact: true })).toBeVisible();
-
-		await page.getByRole('button', { name: 'Retirer le médicament' }).click();
-		await expect(page.getByText('Aucun médicament')).toBeVisible();
-	});
 });
 
-// Keyboard shortcuts — Alt+N adds a medication line, Alt+2/Alt+1 switch clinical tabs.
+// Keyboard shortcuts — Alt+2/Alt+1 switch clinical tabs; Alt+N opens the ordonnance window.
 test.describe('Consultation — keyboard shortcuts', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
@@ -53,16 +62,9 @@ test.describe('Consultation — keyboard shortcuts', () => {
 		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
 	});
 
-	test('Alt+N adds a medication line', async ({ page }) => {
-		await expect(page.getByText('Aucun médicament')).toBeVisible();
-		await ensureHydrated(page);
-		await page.keyboard.press('Alt+n');
-		await expect(page.getByText('1 médicament', { exact: true })).toBeVisible();
-	});
-
 	test('Alt+2 / Alt+1 switch between the Diagnostic and Motif tabs', async ({ page }) => {
-		const diagnosis = page.getByPlaceholder('Diagnostic principal…');
-		const motif = page.getByPlaceholder('Motif…');
+		const diagnosis = page.getByPlaceholder('Diagnostic retenu…');
+		const motif = page.getByPlaceholder('Saisissez le motif…');
 		// Motif panel is active by default; diagnostic panel is in the DOM but hidden.
 		await expect(motif).toBeVisible();
 		await expect(diagnosis).toBeHidden();
@@ -75,60 +77,103 @@ test.describe('Consultation — keyboard shortcuts', () => {
 		await expect(motif).toBeVisible();
 		await expect(diagnosis).toBeHidden();
 	});
+
+	test('Alt+N opens the ordonnance window once a patient is selected', async ({ page }) => {
+		await selectFirstPatient(page);
+		await ensureHydrated(page);
+		await page.keyboard.press('Alt+n');
+		await expect(page.getByRole('dialog', { name: 'Nouvelle ordonnance' })).toBeVisible();
+	});
 });
 
-// Ordonnance — posologie is a free-text field (the ambiguous "Prise"/"Fréquence"
-// column was dropped; dosage/posologie is now directly enterable).
-test.describe('Consultation — ordonnance posologie', () => {
+// Ordonnance window — the centerpiece of the redesign: a search-driven catalogue
+// on the left, the prescription being built on the right.
+test.describe('Consultation — ordonnance window', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 		await page.goto('/consultation');
 		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
+		await selectFirstPatient(page);
 	});
 
-	test('posologie is a visible free-text input on a medication line', async ({ page }) => {
-		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
-
-		const posologie = page.getByPlaceholder('1-0-1-0 ou texte libre');
-		await expect(posologie).toBeVisible();
-		await posologie.fill('1 comprimé au besoin');
-		await expect(posologie).toHaveValue('1 comprimé au besoin');
-
-		// The old ambiguous "Prise" column header is gone.
-		await expect(page.getByText('Prise', { exact: true })).toHaveCount(0);
+	test('the CTA is disabled until a patient is picked', async ({ page }) => {
+		await page.goto('/consultation');
+		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
+		// No patient yet → both the centre CTA and the action-bar button are disabled.
+		await expect(page.getByRole('button', { name: 'Créer une ordonnance', exact: true })).toBeDisabled();
 	});
 
-	test('a 1-0-1-0 pattern expands to readable moments on blur', async ({ page }) => {
-		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
+	test('opening shows the dedicated window with the searchable catalogue', async ({ page }) => {
+		await openOrdonnance(page);
+		await expect(page.getByRole('textbox', { name: 'Rechercher un médicament' })).toBeVisible();
+		await expect(page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first()).toBeVisible();
+		// Empty prescription panel guides the user.
+		await expect(page.getByText('Recherchez un médicament à gauche')).toBeVisible();
+		// Print is disabled while the ordonnance is empty.
+		await expect(page.getByRole('button', { name: "Imprimer l'ordonnance" }).first()).toBeDisabled();
+	});
 
-		const posologie = page.getByPlaceholder('1-0-1-0 ou texte libre');
+	test('search narrows the catalogue', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('textbox', { name: 'Rechercher un médicament' }).fill('amox');
+		await expect(page.getByRole('button', { name: /AMOXICILLINE 1g/ }).first()).toBeVisible();
+		await expect(page.getByRole('button', { name: /PARACÉTAMOL/ })).toHaveCount(0);
+	});
+
+	test('picking a catalogue medication fills the prescription panel and enables print', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
+
+		// Editable line pre-filled from the catalogue (name + posology).
+		await expect(page.getByRole('textbox', { name: 'Nom + dosage' })).toHaveValue('PARACÉTAMOL 1g');
+		await expect(page.getByPlaceholder('Posologie (ex. 1-0-1-0 ou 1 comprimé matin et soir)')).toHaveValue(
+			'1 comprimé 3 fois par jour si douleur'
+		);
+		// Print is now available.
+		await expect(page.getByRole('button', { name: "Imprimer l'ordonnance" }).first()).toBeEnabled();
+	});
+
+	test('a 1-0-1-0 posology expands to readable moments on blur', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
+
+		const posologie = page.getByPlaceholder('Posologie (ex. 1-0-1-0 ou 1 comprimé matin et soir)');
 		await posologie.fill('1-0-1-0');
-		// Live hint previews the expansion before committing.
-		await expect(page.getByText('= 1 matin, 1 soir')).toBeVisible();
-		// Blur normalises the shortcut in place (matin-midi-soir-coucher).
 		await posologie.blur();
 		await expect(posologie).toHaveValue('1 matin, 1 soir');
 	});
 
-	test('free-text posology is left untouched (shortcut is additive)', async ({ page }) => {
-		await page.getByRole('button', { name: 'Ajouter un médicament' }).click();
+	test('removing the line empties the ordonnance again', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
+		await expect(page.getByRole('textbox', { name: 'Nom + dosage' })).toBeVisible();
 
-		const posologie = page.getByPlaceholder('1-0-1-0 ou texte libre');
-		await posologie.fill('1 cp au besoin');
-		await posologie.blur();
-		await expect(posologie).toHaveValue('1 cp au besoin');
+		await page.getByRole('button', { name: 'Retirer' }).click();
+		await expect(page.getByText('Recherchez un médicament à gauche')).toBeVisible();
+		await expect(page.getByRole('button', { name: "Imprimer l'ordonnance" }).first()).toBeDisabled();
 	});
 
-	test('a frequent-medication chip adds a pre-filled line', async ({ page }) => {
-		await page.getByRole('button', { name: '+ METFORMINE 1000mg' }).click();
-		await expect(page.getByText('1 médicament', { exact: true })).toBeVisible();
-		// The medication name input (Combobox) of the new line is pre-filled.
-		await expect(page.locator('.med-card input').first()).toHaveValue('METFORMINE 1000mg');
+	test('closing with a medication surfaces the "Ordonnance prête" summary', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
+		await page.getByRole('button', { name: 'Fermer' }).click();
+
+		await expect(page.getByText('Ordonnance prête')).toBeVisible();
+		await expect(page.getByText('1 médicament prescrit')).toBeVisible();
+	});
+
+	test('the print preview renders the ordonnance médicale', async ({ page }) => {
+		await openOrdonnance(page);
+		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
+		await page.getByRole('button', { name: "Imprimer l'ordonnance" }).first().click();
+
+		await expect(page.getByText('ORDONNANCE MÉDICALE')).toBeVisible();
+		await expect(page.getByText('Aperçu avant impression')).toBeVisible();
 	});
 });
 
 // Act catalogue → consultation: an honoraire chip carries the act's tariff and
-// pre-fills the montant (the act picker is now a quick-pick chip row).
+// pre-fills the montant (the act picker is a quick-pick chip row in the action bar).
 test.describe('Consultation — honoraire chips', () => {
 	test('clicking a catalogue-act chip pre-fills the montant', async ({ page }) => {
 		await login(page);
