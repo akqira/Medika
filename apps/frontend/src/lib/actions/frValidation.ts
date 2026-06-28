@@ -53,6 +53,11 @@ function frMessage(el: ValidatableControl): string {
 		return 'Veuillez saisir une valeur valide.';
 	}
 	if (v.patternMismatch) {
+		// A pattern on an email field narrows the native check (e.g. requires a TLD),
+		// so surface the email-specific message rather than the generic one.
+		if (el instanceof HTMLInputElement && el.type === 'email') {
+			return 'Veuillez saisir une adresse e-mail valide.';
+		}
 		return 'Veuillez respecter le format demandé.';
 	}
 	if (v.badInput) {
