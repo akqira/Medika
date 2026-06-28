@@ -59,11 +59,11 @@ test.describe('New patient — validation failures', () => {
 		await page.getByRole('button', { name: 'Continuer' }).click();
 		await expect(page.getByText('Étape 2 sur 4')).toBeVisible();
 
-		// A non-Algerian-mobile number is rejected.
+		// A non-Algerian number is rejected.
 		await page.getByLabel('TÉLÉPHONE *').fill('12345');
 		await page.getByRole('button', { name: 'Continuer' }).click();
 
-		await expect(page.getByText('Format invalide — ex: 0555 12 34 56').first()).toBeVisible();
+		await expect(page.getByText('Numéro algérien invalide', { exact: false }).first()).toBeVisible();
 		await expect(page.getByText('Étape 2 sur 4')).toBeVisible();
 	});
 
@@ -111,5 +111,45 @@ test.describe('New patient — validation failures', () => {
 		await expect(page.getByText('Le NSS doit contenir exactement 15 chiffres')).toBeVisible();
 		// validateStep4 aborts the submit — we stay on the wizard, still step 4.
 		await expect(page.getByText('Étape 4 sur 4')).toBeVisible();
+	});
+});
+
+// Issue #124 — phone validation must accept landlines (021…) and mobiles of every
+// operator, not just the old 05/06/07-only rule. These are NON-MUTATING: advancing
+// past step 2 (→ step 3) proves the number was accepted; the form is never submitted.
+test.describe('New patient — phone formats (#124)', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+		await page.goto('/patients/new');
+		await page.getByLabel('PRÉNOM *').fill('Ahmed');
+		await page.getByLabel('NOM *', { exact: true }).fill('Benali');
+		await page.getByLabel('DATE DE NAISSANCE *').fill('1990-05-12');
+		await page.getByRole('button', { name: 'Continuer' }).click();
+		await expect(page.getByText('Étape 2 sur 4')).toBeVisible();
+	});
+
+	// One mobile per operator + a landline — all must let the wizard advance.
+	for (const { label, value } of [
+		{ label: 'mobile Ooredoo (05)', value: '0555 12 34 56' },
+		{ label: 'mobile Mobilis (06)', value: '0661 23 45 67' },
+		{ label: 'mobile Djezzy (07)', value: '0791 23 45 67' },
+		{ label: 'fixe Alger (021…)', value: '021 23 45 67' }
+	]) {
+		test(`accepts a ${label}`, async ({ page }) => {
+			await page.getByLabel('TÉLÉPHONE *').fill(value);
+			await page.getByRole('button', { name: 'Continuer' }).click();
+
+			// Advanced to step 3 → phone accepted, no error shown.
+			await expect(page.getByText('Étape 3 sur 4')).toBeVisible();
+			await expect(page.getByText('Numéro algérien invalide', { exact: false })).toHaveCount(0);
+		});
+	}
+
+	test('rejects a number that is neither mobile nor landline', async ({ page }) => {
+		await page.getByLabel('TÉLÉPHONE *').fill('0812345678'); // 08 prefix
+		await page.getByRole('button', { name: 'Continuer' }).click();
+
+		await expect(page.getByText('Numéro algérien invalide', { exact: false }).first()).toBeVisible();
+		await expect(page.getByText('Étape 2 sur 4')).toBeVisible();
 	});
 });

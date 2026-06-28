@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import { isValidDzPhone, DZ_PHONE_ERROR } from '$lib/phone';
 	import type { PatientSummary } from '$lib/types/api';
 
 	let { onPatientAdded, onClose }: {
@@ -24,7 +25,6 @@
 
 	const NAME_RE  = /^[\p{L}\s'\-]{2,}$/u;
 	const NAME_MAX = 100;
-	const PHONE_RE = /^0[5-7]\d{8}$/;
 
 	function validate(): boolean {
 		const e: Record<string, string> = {};
@@ -41,7 +41,7 @@
 		else if (ln.length > NAME_MAX) e.lastName = '100 caractères maximum';
 
 		if (!ph)                      e.phone = 'Champ requis';
-		else if (!PHONE_RE.test(ph))  e.phone = 'Format invalide — ex: 0555 12 34 56';
+		else if (!isValidDzPhone(ph)) e.phone = DZ_PHONE_ERROR;
 
 		if (!dob)              e.dob = 'Date de naissance requise';
 		else if (dob > maxDate) e.dob = 'La date ne peut pas être dans le futur';

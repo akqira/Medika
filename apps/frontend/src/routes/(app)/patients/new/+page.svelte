@@ -3,6 +3,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { isValidDzPhone, DZ_PHONE_ERROR } from '$lib/phone';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -122,7 +123,6 @@
 		return Object.keys(e).length === 0;
 	}
 
-	const PHONE_RE = /^0[5-7]\d{8}$/;
 	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 	function validateStep2() {
@@ -130,12 +130,12 @@
 		const p = phone.trim();
 		if (!p) {
 			e.phone = 'Champ requis';
-		} else if (!PHONE_RE.test(p.replace(/\s/g, ''))) {
-			e.phone = 'Format invalide — ex: 0555 12 34 56';
+		} else if (!isValidDzPhone(p)) {
+			e.phone = DZ_PHONE_ERROR;
 		}
 		const ep = emergencyContactPhone.trim();
-		if (ep && !PHONE_RE.test(ep.replace(/\s/g, ''))) {
-			e.emergencyContactPhone = 'Format invalide — ex: 0555 12 34 56';
+		if (ep && !isValidDzPhone(ep)) {
+			e.emergencyContactPhone = DZ_PHONE_ERROR;
 		}
 		const em = email.trim();
 		if (em && !EMAIL_RE.test(em)) {
