@@ -10,13 +10,20 @@ async function ensureHydrated(page: Page) {
 	await page.getByPlaceholder('Saisissez le motif…').click();
 }
 
-// Selects the first real patient (option 0 is the "— Sélectionner —" placeholder).
-// Hydrate first: selectOption before the client binds would set the native value
-// without updating Svelte state, leaving the ordonnance CTA stuck disabled.
-async function selectFirstPatient(page: Page) {
+// The seeded DB has NO patients (only the doctor), so the suite must create its
+// own. The consultation page's inline "Nouveau" quick-add creates a patient and
+// auto-selects it — that's both hydration-safe and independent of seed data.
+async function createAndSelectPatient(page: Page) {
+	await page.goto('/consultation');
+	await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
 	await ensureHydrated(page);
-	await page.locator("select[aria-label='Patient']").selectOption({ index: 1 });
-	// The CTA flips enabled once selectedPatient is set — wait for it.
+	await page.getByRole('button', { name: 'Nouveau' }).click();
+	await page.locator('#qap-firstName').fill('Test');
+	await page.locator('#qap-lastName').fill('Ordonnance');
+	await page.locator('#qap-phone').fill('0555123456');
+	await page.locator('#qap-dob').fill('1990-05-15');
+	await page.getByRole('button', { name: 'Créer le patient' }).click();
+	// Auto-selected → the ordonnance CTA flips enabled.
 	await expect(page.getByRole('button', { name: 'Créer une ordonnance', exact: true })).toBeEnabled();
 }
 
@@ -40,6 +47,7 @@ test.describe('Consultation — save failures', () => {
 	});
 
 	test('saving with no patient is blocked inline before reaching the server', async ({ page }) => {
+		await ensureHydrated(page); // the save handler is client-side — wait for hydration
 		await page.getByRole('button', { name: /Enregistrer & encaisser/ }).click();
 		// Inline, UI-styled validation message — no dialog, no navigation.
 		await expect(page.getByText('Sélectionnez un patient')).toBeVisible();
@@ -52,17 +60,20 @@ test.describe('Consultation — save failures', () => {
 		await expect(page.getByText('Sélectionnez un patient')).toBeVisible();
 		await expect(page).toHaveURL(/\/consultation/);
 	});
+
+	test('the ordonnance CTA is disabled until a patient is picked', async ({ page }) => {
+		// Fresh load, no patient → the action-bar CTA is disabled.
+		await expect(page.getByRole('button', { name: 'Créer une ordonnance', exact: true })).toBeDisabled();
+	});
 });
 
 // Keyboard shortcuts — Alt+2/Alt+1 switch clinical tabs; Alt+N opens the ordonnance window.
 test.describe('Consultation — keyboard shortcuts', () => {
-	test.beforeEach(async ({ page }) => {
+	test('Alt+2 / Alt+1 switch between the Diagnostic and Motif tabs', async ({ page }) => {
 		await login(page);
 		await page.goto('/consultation');
 		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
-	});
 
-	test('Alt+2 / Alt+1 switch between the Diagnostic and Motif tabs', async ({ page }) => {
 		const diagnosis = page.getByPlaceholder('Diagnostic retenu…');
 		const motif = page.getByPlaceholder('Saisissez le motif…');
 		// Motif panel is active by default; diagnostic panel is in the DOM but hidden.
@@ -79,8 +90,8 @@ test.describe('Consultation — keyboard shortcuts', () => {
 	});
 
 	test('Alt+N opens the ordonnance window once a patient is selected', async ({ page }) => {
-		await selectFirstPatient(page);
-		await ensureHydrated(page);
+		await login(page);
+		await createAndSelectPatient(page);
 		await page.keyboard.press('Alt+n');
 		await expect(page.getByRole('dialog', { name: 'Nouvelle ordonnance' })).toBeVisible();
 	});
@@ -91,16 +102,7 @@ test.describe('Consultation — keyboard shortcuts', () => {
 test.describe('Consultation — ordonnance window', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
-		await page.goto('/consultation');
-		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
-		await selectFirstPatient(page);
-	});
-
-	test('the CTA is disabled until a patient is picked', async ({ page }) => {
-		await page.goto('/consultation');
-		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
-		// No patient yet → both the centre CTA and the action-bar button are disabled.
-		await expect(page.getByRole('button', { name: 'Créer une ordonnance', exact: true })).toBeDisabled();
+		await createAndSelectPatient(page);
 	});
 
 	test('opening shows the dedicated window with the searchable catalogue', async ({ page }) => {
@@ -156,7 +158,8 @@ test.describe('Consultation — ordonnance window', () => {
 	test('closing with a medication surfaces the "Ordonnance prête" summary', async ({ page }) => {
 		await openOrdonnance(page);
 		await page.getByRole('button', { name: /PARACÉTAMOL 1g/ }).first().click();
-		await page.getByRole('button', { name: 'Fermer' }).click();
+		// exact: a "Patient créé" toast also exposes a "Fermer la notification" button.
+		await page.getByRole('button', { name: 'Fermer', exact: true }).click();
 
 		await expect(page.getByText('Ordonnance prête')).toBeVisible();
 		await expect(page.getByText('1 médicament prescrit')).toBeVisible();
