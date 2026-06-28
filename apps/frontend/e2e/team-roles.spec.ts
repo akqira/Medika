@@ -39,6 +39,25 @@ test.describe('Team & roles — admin surface', () => {
 		await expect(page.getByText("a été ajouté(e) à l'équipe.")).toHaveCount(0);
 	});
 
+	test('adding a member with a malformed email (no TLD) is blocked client-side — no request fires', async ({ page }) => {
+		// Issue #100 — `a@b` (no TLD, non-deliverable) used to create a real account.
+		await page.goto('/team');
+		await page.getByRole('button', { name: 'Ajouter un membre' }).click();
+
+		await page.getByLabel('Prénom').fill('Test');
+		await page.getByLabel('Nom', { exact: true }).fill('Invalide');
+		await page.getByLabel('Email').fill('a@b'); // missing TLD
+		await page.getByLabel('Mot de passe provisoire').fill('Password@123');
+		await page.getByRole('button', { name: 'Créer le compte' }).click();
+
+		// The `pattern` constraint stops submission — we stay on the form, no account is created.
+		await expect(page.getByRole('heading', { name: 'Nouveau secrétaire' })).toBeVisible();
+		await expect(page.getByText("a été ajouté(e) à l'équipe.")).toHaveCount(0);
+		// The email field is reported invalid by the browser.
+		const valid = await page.getByLabel('Email').evaluate((el: HTMLInputElement) => el.validity.valid);
+		expect(valid).toBe(false);
+	});
+
 	test('adding a member with an already-registered email is rejected by the backend', async ({ page }) => {
 		await page.goto('/team');
 		await page.getByRole('button', { name: 'Ajouter un membre' }).click();

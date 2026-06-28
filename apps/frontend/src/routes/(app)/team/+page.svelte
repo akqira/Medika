@@ -85,7 +85,7 @@
 					</label>
 					<label style="display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--text-muted)">
 						Email
-						<input class="mk-input" name="email" type="email" required />
+						<input class="mk-input" name="email" type="email" required pattern="[^@\s]+@[^@\s]+\.[^@\s]+" title="Veuillez saisir une adresse e-mail valide (ex. nom@cabinet.fr)." />
 					</label>
 					<label style="display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--text-muted)">
 						Mot de passe provisoire
