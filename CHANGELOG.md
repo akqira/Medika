@@ -6,6 +6,7 @@ All notable changes to Medika are documented here. Format follows
 its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- fix(dashboard): replace dev placeholder in empty schedule state (#103) (#143, closes #103)
 - feat(consultation): remove prescription quantity (boîtes) field (#125) (#142, closes #125)
 - fix(patients): centralize Algerian phone validation, accept landlines (#124) (#141, closes #124)
 - fix(team): reject malformed emails (no TLD) on add-member (#100) (#140, closes #100)

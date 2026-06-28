@@ -74,8 +74,8 @@
 			{#if data.appointments.length === 0}
 				<div style="padding:52px 20px;text-align:center;color:var(--text-muted)">
 					<Icon name="calendar" size={36} color="var(--border-strong)" />
-					<p style="margin-top:12px;font-size:14px">Aucun rendez-vous aujourd'hui</p>
-					<p style="font-size:13px;color:var(--text-light);margin-top:4px">Le backend n'est pas encore connecté</p>
+					<p style="margin-top:12px;font-size:14px">Aucun rendez-vous programmé pour aujourd'hui</p>
+					<a href="/schedule" style="display:inline-block;margin-top:14px;font-size:13px;color:var(--primary);text-decoration:none;font-weight:500">Programmer un rendez-vous →</a>
 				</div>
 			{:else}
 				{#each data.appointments as appt}
