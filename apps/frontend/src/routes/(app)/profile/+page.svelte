@@ -4,6 +4,7 @@
 	import type { PageData, ActionData } from './$types';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import { isValidDzPhone, DZ_PHONE_ERROR } from '$lib/phone';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -29,9 +30,8 @@
 	let cabinetAddress = $state(data.profile.cabinetAddress ?? '');
 	let cabinetWilaya  = $state(data.profile.cabinetWilaya ?? '');
 
-	// Cabinet phone — numeric-only field, validated as an Algerian number
-	// (mobile 05/06/07 or fixed 02/03/04), 10 digits total.
-	const DZ_PHONE_RE = /^0[2-7]\d{8}$/;
+	// Cabinet phone — numeric-only field, validated as an Algerian number via the
+	// shared rule ($lib/phone): mobile (05/06/07, 10 digits) or fixe (0[1-4], 9 digits).
 	let cabinetPhone = $state(data.profile.cabinetPhone ?? '');
 	let phoneError   = $state('');
 	// Client-side, form-level error shown when the save is cancelled before it
@@ -54,8 +54,8 @@
 
 	function validateCabinetPhone(): boolean {
 		const p = cabinetPhone.trim();
-		if (p && !DZ_PHONE_RE.test(p)) {
-			phoneError = 'Numéro algérien invalide — ex : 0550 12 34 56 ou 023 45 67 89';
+		if (p && !isValidDzPhone(p)) {
+			phoneError = DZ_PHONE_ERROR;
 			return false;
 		}
 		phoneError = '';

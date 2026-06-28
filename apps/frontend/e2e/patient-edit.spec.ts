@@ -98,7 +98,7 @@ test.describe('Patient dossier — edit', () => {
 		await page.getByLabel('Téléphone', { exact: true }).fill('12345');
 		await page.getByRole('button', { name: 'Enregistrer les modifications' }).first().click();
 
-		await expect(page.getByText('Format invalide — ex: 0555 12 34 56').first()).toBeVisible();
+		await expect(page.getByText('Numéro algérien invalide', { exact: false }).first()).toBeVisible();
 		await expect(page).toHaveURL(new RegExp(`/patients/${patientId}/edit`));
 	});
 

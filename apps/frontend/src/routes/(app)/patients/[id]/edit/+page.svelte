@@ -4,6 +4,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { isValidDzPhone, DZ_PHONE_ERROR } from '$lib/phone';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -97,7 +98,6 @@
 
 	// ── Validation (runs on save; same rules as the create form) ──
 	const NAME_RE = /^[\p{L}\s'\-]{2,}$/u;
-	const PHONE_RE = /^0[5-7]\d{8}$/;
 	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 	const NSS_RE = /^\d{15}$/;
 
@@ -123,9 +123,9 @@
 		else if (dateOfBirth < minDate) e.dateOfBirth = 'Âge maximum 100 ans';
 		const ph = phone.trim();
 		if (!ph) e.phone = 'Champ requis';
-		else if (!PHONE_RE.test(ph.replace(/\s/g, ''))) e.phone = 'Format invalide — ex: 0555 12 34 56';
+		else if (!isValidDzPhone(ph)) e.phone = DZ_PHONE_ERROR;
 		const ep = emergencyContactPhone.trim();
-		if (ep && !PHONE_RE.test(ep.replace(/\s/g, ''))) e.emergencyContactPhone = 'Format invalide — ex: 0555 12 34 56';
+		if (ep && !isValidDzPhone(ep)) e.emergencyContactPhone = DZ_PHONE_ERROR;
 		const em = email.trim();
 		if (em && !EMAIL_RE.test(em)) e.email = 'Adresse email invalide';
 		const n = nss.trim();
