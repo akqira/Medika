@@ -33,6 +33,7 @@
 	const DZ_PHONE_RE = /^0[2-7]\d{8}$/;
 	let cabinetPhone = $state(data.profile.cabinetPhone ?? '');
 	let phoneError   = $state('');
+	let nameError    = $state('');
 	// Client-side, form-level error shown when the save is cancelled before it
 	// reaches the server (e.g. invalid phone). Without it the cancel is silent and
 	// the cabinet/order/address edits look like they "didn't persist" (#85).
@@ -49,6 +50,15 @@
 		cabinetPhone = digits;
 		if (phoneError) phoneError = '';
 		if (cabinetSaveError) cabinetSaveError = '';
+	}
+
+	function validateCabinetName(): boolean {
+		if (!cabinetName.trim()) {
+			nameError = 'Le nom du cabinet est requis.';
+			return false;
+		}
+		nameError = '';
+		return true;
 	}
 
 	function validateCabinetPhone(): boolean {
@@ -147,7 +157,19 @@
 			<!-- ─── TAB: Mon cabinet ─── -->
 			{#if activeTab === 'cabinet'}
 				<form method="POST" action="?/saveCabinet" use:enhance={({ cancel }) => {
-					if (!validateCabinetPhone()) {
+					// Name is required identification — block the save and surface it
+					// so the empty value never reaches the server (mirrors #133).
+					const nameOk  = validateCabinetName();
+					const phoneOk = validateCabinetPhone();
+					if (!nameOk) {
+						cancel();
+						cabinetSaveError = 'Enregistrement annulé : le nom du cabinet est requis. Vos autres modifications sont conservées.';
+						const nameEl = document.getElementById('cabinetName');
+						nameEl?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+						nameEl?.focus();
+						return;
+					}
+					if (!phoneOk) {
 						// Don't save an invalid phone — but make the block VISIBLE so the
 						// user's cabinet/order/address edits don't silently vanish (#85).
 						// The typed values stay in the inputs; the user fixes the phone
@@ -166,7 +188,8 @@
 
 						<div style="grid-column:1/-1">
 							<label for="cabinetName" style="display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:5px">Nom du cabinet</label>
-							<input id="cabinetName" name="cabinetName" class="mk-input" bind:value={cabinetName} placeholder="Cabinet médical Dr. …" />
+							<input id="cabinetName" name="cabinetName" class="mk-input" class:input-err={nameError} bind:value={cabinetName} oninput={() => { if (nameError) nameError = ''; if (cabinetSaveError) cabinetSaveError = ''; }} placeholder="Cabinet médical Dr. …" />
+							{#if nameError}<p class="field-error"><Icon name="alertCircle" size={12} color="var(--danger)" /> {nameError}</p>{/if}
 						</div>
 
 						<div>
