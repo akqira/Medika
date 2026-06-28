@@ -56,6 +56,9 @@ degrade gracefully (log a warning, comment on the issue) if their secrets are ab
 ## Pausing / disabling
 
 - Pause one issue: remove the `status:in-progress` label before the job starts.
+- Claim an issue for yourself: add the **`autopilot:skip`** label. The guard then
+  ignores `status:in-progress` for that issue, so the autopilot won't open a
+  competing PR while you implement it by hand.
 - Pause everything: disable **Autopilot — Build** in the repo Actions tab.
 - Hard stop: delete `CLAUDE_CODE_OAUTH_TOKEN` (build fails fast at the guard step).
 
