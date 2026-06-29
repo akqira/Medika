@@ -222,3 +222,31 @@ test.describe('Consultation — honoraire chips', () => {
 		}
 	});
 });
+
+// Guided steps (issue #127) — a numbered stepbar highlights the current step + its
+// zone with a contextual hint, so non-tech doctors are walked through the flow.
+// (Print discoverability is already covered by the #135 ordonnance window above.)
+test.describe('Consultation — guided stepbar (#127)', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+		await page.goto('/consultation');
+		await expect(page.getByRole('heading', { name: /Consultation du/ })).toBeVisible();
+	});
+
+	test('the stepbar shows the six steps with the first one active', async ({ page }) => {
+		for (const label of ['1 Patient', '2 Constantes', '3 Motif & diagnostic', '4 Ordonnance', '5 Honoraires', '6 Finaliser']) {
+			await expect(page.getByRole('button', { name: label })).toBeVisible();
+		}
+		// Step 1 is the active step on load, with its contextual hint shown.
+		await expect(page.getByRole('button', { name: '1 Patient' })).toHaveAttribute('aria-current', 'step');
+		await expect(page.getByText('Choisissez le patient')).toBeVisible();
+	});
+
+	test('clicking a step moves the active highlight and updates the hint', async ({ page }) => {
+		await page.getByRole('button', { name: '4 Ordonnance' }).click();
+		await expect(page.getByRole('button', { name: '4 Ordonnance' })).toHaveAttribute('aria-current', 'step');
+		await expect(page.getByRole('button', { name: '1 Patient' })).not.toHaveAttribute('aria-current', 'step');
+		// The hint updates to the ordonnance step (references the dedicated window).
+		await expect(page.getByText('ouvre une fenêtre pour prescrire')).toBeVisible();
+	});
+});
