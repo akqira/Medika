@@ -6,6 +6,7 @@ All notable changes to Medika are documented here. Format follows
 its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- chore: back-merge main into dev (reconcile production hotfixes) (#150)
 - fix(a11y): set lang="fr" on root <html> element (#148, closes #144)
 - fix(ci): disable Vercel deployments for the qa-evidence branch (#145) (#146, closes #145)
 - fix(dashboard): replace dev placeholder in empty schedule state (#103) (#143, closes #103)
