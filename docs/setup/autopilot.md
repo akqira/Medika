@@ -23,6 +23,8 @@ issue labelled status:in-progress
    └─ green           → open PR vs dev            (status: pr_opened)
         │
         ▼  screenshot.mjs (boots stack, logs in, captures feature route)
+        ▼  post-screenshot.mjs (commits shot under docs/ui-validation/, posts it
+                                into the PR via a commit-pinned raw URL — UI routes only)
         ▼  notify.mjs (Brevo email + issue comment)
         │
    Kader reviews & MERGES the PR  ← manual gate, always
@@ -35,12 +37,12 @@ issue labelled status:in-progress
 
 | Secret | Used for | Notes |
 |--------|----------|-------|
-| `ANTHROPIC_API_KEY` | running Claude Code headless | **autonomous spend** — billed to this key |
+| `CLAUDE_CODE_OAUTH_TOKEN` | running Claude Code headless | subscription auth (`claude setup-token`); no metered API billing. Same secret the QA-sweep workflow uses |
 | `PROJECTS_TOKEN` | board moves, PR/issue writes | classic PAT with **`project`** + **`repo`** scope. `GITHUB_TOKEN` cannot touch user Projects v2 |
 | `BREVO_API_KEY` | sending the notification email | same provider as the app's transactional email |
 | `BREVO_FROM_EMAIL` | email sender | must be a **verified** Brevo sender |
 
-The build workflow **fails fast** if `ANTHROPIC_API_KEY` is missing. Email/board steps
+The build workflow **fails fast** if `CLAUDE_CODE_OAUTH_TOKEN` is missing. Email/board steps
 degrade gracefully (log a warning, comment on the issue) if their secrets are absent.
 
 ## Guardrails
@@ -54,8 +56,11 @@ degrade gracefully (log a warning, comment on the issue) if their secrets are ab
 ## Pausing / disabling
 
 - Pause one issue: remove the `status:in-progress` label before the job starts.
+- Claim an issue for yourself: add the **`autopilot:skip`** label. The guard then
+  ignores `status:in-progress` for that issue, so the autopilot won't open a
+  competing PR while you implement it by hand.
 - Pause everything: disable **Autopilot — Build** in the repo Actions tab.
-- Hard stop: delete `ANTHROPIC_API_KEY` (build fails fast at the guard step).
+- Hard stop: delete `CLAUDE_CODE_OAUTH_TOKEN` (build fails fast at the guard step).
 
 ## Tuning
 

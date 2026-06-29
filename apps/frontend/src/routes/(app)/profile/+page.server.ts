@@ -54,6 +54,9 @@ export const actions: Actions = {
 	saveCabinet: async ({ request, cookies }) => {
 		const token = getToken(cookies)!;
 		const data = await request.formData();
+		const cabinetName = data.get('cabinetName')?.toString().trim() ?? '';
+		if (!cabinetName)
+			return fail(400, { tab: 'cabinet', error: 'Le nom du cabinet est requis.' });
 		try {
 			await api.patch('/api/profile/cabinet', {
 				cabinetName:    data.get('cabinetName'),
@@ -65,8 +68,13 @@ export const actions: Actions = {
 			}, token);
 			return { tab: 'cabinet', success: 'Informations du cabinet mises à jour.' };
 		} catch (e: unknown) {
-			// Propagate SvelteKit errors (401, 403)
-			if (e && typeof e === 'object' && 'status' in e) throw e;
+			// Propagate SvelteKit errors (401, 403); surface backend validation (400)
+			if (e && typeof e === 'object' && 'status' in e) {
+				const httpErr = e as { status: number; body?: { message?: string } };
+				if (httpErr.status === 400)
+					return fail(400, { tab: 'cabinet', error: httpErr.body?.message ?? 'Le nom du cabinet est requis.' });
+				throw e;
+			}
 			return fail(500, { tab: 'cabinet', error: 'Erreur lors de la sauvegarde. Veuillez réessayer.' });
 		}
 	},

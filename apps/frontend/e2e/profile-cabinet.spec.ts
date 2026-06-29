@@ -57,6 +57,30 @@ test.describe('Profile — cabinet phone validation (issue #84)', () => {
 	});
 });
 
+// Issue #133 — the "Mon cabinet" tab persisted a submission with an empty
+// "Nom du cabinet". The name is required identification, so the save must be
+// blocked client-side (and rejected server-side) before the empty value can
+// overwrite the stored name. Non-mutating: the save is cancelled client-side, so
+// the suite stays re-runnable.
+test.describe('Profile — cabinet name required (issue #133)', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+		await page.goto('/profile');
+		await expect(page.getByRole('button', { name: 'Mon cabinet' })).toBeVisible();
+	});
+
+	test('an empty cabinet name shows an error and blocks the save', async ({ page }) => {
+		await page.getByLabel('Nom du cabinet').fill('');
+		await page.getByRole('button', { name: 'Enregistrer le cabinet' }).click();
+
+		// A required-field error is shown (under the field, exact match avoids the
+		// longer banner message that also contains this phrase)...
+		await expect(page.getByText('Le nom du cabinet est requis.', { exact: true })).toBeVisible();
+		// ...and the success banner never appears because the submit was cancelled.
+		await expect(page.getByText('Informations du cabinet mises à jour.')).toHaveCount(0);
+	});
+});
+
 // Issue #85 — "Champs non persistés". The cabinet name / order number / address
 // inputs used a one-way `value={data.profile.…}` binding. Editing the phone field
 // updates component state and re-renders the form, and that re-render re-asserted
