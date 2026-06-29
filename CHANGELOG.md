@@ -6,6 +6,13 @@ All notable changes to Medika are documented here. Format follows
 its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- docs: cut v0.2.0 release (changelog + roadmap) (#151)
+
+## [0.2.0] - 2026-06-29
+
+Second production release — `dev` promoted to `main` (#149); production hotfixes
+reconciled back into `dev` (#150). Release notes: <https://github.com/akqira/Medika/releases/tag/v0.2.0>.
+
 - chore: back-merge main into dev (reconcile production hotfixes) (#150)
 - fix(a11y): set lang="fr" on root <html> element (#148, closes #144)
 - fix(ci): disable Vercel deployments for the qa-evidence branch (#145) (#146, closes #145)

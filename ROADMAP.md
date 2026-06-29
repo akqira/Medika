@@ -21,7 +21,7 @@
 | 4 · Finances | ✅ — export comptable PDF/Excel ⏸️ reporté | [milestone](https://github.com/akqira/Medika/milestone/11) |
 | Backlog — Plus tard | ⬜ Versements partiels, self-booking, multi-cabinet, rôles | [milestone](https://github.com/akqira/Medika/milestone/12) |
 
-**Phases 0 à 4 livrées et vérifiées** (tests unitaires .NET + e2e Playwright + vitest front au vert en CI). **Première mise en production `dev → main` livrée — [v0.1.0](https://github.com/akqira/Medika/releases/tag/v0.1.0)** (#60). Reste non bloquant : validation visuelle dossier patient. Décisions ouvertes : `docs/Kaki/Feedback-Analyse.md`.
+**Phases 0 à 4 livrées et vérifiées** (tests unitaires .NET + e2e Playwright + vitest front au vert en CI). **Dernière mise en production `dev → main` — [v0.2.0](https://github.com/akqira/Medika/releases/tag/v0.2.0)** (#149 ; refonte consultation/ordonnance, dossier patient éditable, toasts). Première promotion : [v0.1.0](https://github.com/akqira/Medika/releases/tag/v0.1.0) (#60). Reste non bloquant : validation visuelle dossier patient. Décisions ouvertes : `docs/Kaki/Feedback-Analyse.md`.
 
 ---
 
