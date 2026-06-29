@@ -229,6 +229,47 @@
 	// Nombre de lignes effectivement prescrites (nom renseigné).
 	const validMedCount = $derived(medications.filter((m) => m.medication.trim()).length);
 
+	// ── Guide pas à pas (issue #127): une barre d'étapes numérotées met en évidence
+	// la zone, les champs et le bouton d'action de l'étape en cours, avec un indice
+	// contextuel. L'étape active suit là où travaille le médecin (focusin) et reste
+	// cliquable pour y sauter ; la complétion est dérivée → étapes faites cochées. ──
+	type StepKey = 'patient' | 'vitals' | 'clinique' | 'ordonnance' | 'honoraires' | 'finaliser';
+	const STEPS: { n: number; key: StepKey; label: string; hint: string }[] = [
+		{ n: 1, key: 'patient', label: 'Patient', hint: 'Choisissez le patient — son dossier (allergies, antécédents) s’ouvre à gauche.' },
+		{ n: 2, key: 'vitals', label: 'Constantes', hint: 'Saisissez les constantes vitales — le statut se calcule tout seul (optionnel).' },
+		{ n: 3, key: 'clinique', label: 'Motif & diagnostic', hint: 'Notez le motif, l’examen clinique, puis le diagnostic.' },
+		{ n: 4, key: 'ordonnance', label: 'Ordonnance', hint: 'Optionnel — « Créer une ordonnance » ouvre une fenêtre pour prescrire et imprimer.' },
+		{ n: 5, key: 'honoraires', label: 'Honoraires', hint: 'Indiquez le montant — cliquez un tarif ou tapez-le, en bas.' },
+		{ n: 6, key: 'finaliser', label: 'Finaliser', hint: 'Vérifiez puis « Enregistrer & encaisser » en bas à droite.' }
+	];
+	let activeStep = $state<StepKey>('patient');
+	const activeHint = $derived(STEPS.find((s) => s.key === activeStep)?.hint ?? '');
+	const stepDone = $derived<Record<StepKey, boolean>>({
+		patient: !!selectedPatientId,
+		vitals: [bp, pulse, temp, weight, height, satO2].some((v) => v.trim() !== ''),
+		clinique: [chiefComplaint, clinicalNotes, diagnosis, notes].some((v) => v.trim() !== ''),
+		ordonnance: validMedCount > 0,
+		honoraires: feeStr.trim() !== '' && num(fee) !== null && (num(fee) as number) >= 0,
+		finaliser: false
+	});
+
+	let vitalsEl = $state<HTMLElement | null>(null);
+	let ordoBlockEl = $state<HTMLElement | null>(null);
+	let saveBtnEl = $state<HTMLButtonElement | null>(null);
+
+	async function goToStep(key: StepKey) {
+		activeStep = key;
+		await tick();
+		switch (key) {
+			case 'patient': patientSelectEl?.focus(); break;
+			case 'vitals': vitalsEl?.querySelector('input')?.focus(); break;
+			case 'clinique': activeTab = 'motif'; await tick(); document.getElementById('reason')?.focus(); break;
+			case 'ordonnance': ordoBlockEl?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus(); break;
+			case 'honoraires': feeInputEl?.focus(); break;
+			case 'finaliser': saveBtnEl?.focus(); break;
+		}
+	}
+
 	// ── Fenêtre Ordonnance (dédiée) + aperçu impression ──
 	let showOrdo = $state(false);
 	let showPrint = $state(false);
@@ -337,9 +378,39 @@
 	<input type="hidden" name="prescription" value={prescriptionJson} />
 	<input type="hidden" name="actName" value={selectedActName} />
 
-	<div class="cockpit">
+	<div class="consult-shell">
+		<!-- ════════ STEPBAR — guide pas à pas (#127) ════════ -->
+		<nav class="stepbar" aria-label="Étapes de la consultation">
+			<ol class="steps">
+				{#each STEPS as s (s.key)}
+					<li class="step-item">
+						<button
+							type="button"
+							class="step"
+							class:active={activeStep === s.key}
+							class:done={stepDone[s.key] && activeStep !== s.key}
+							aria-current={activeStep === s.key ? 'step' : undefined}
+							onclick={() => goToStep(s.key)}
+						>
+							<span class="step-no">
+								{#if stepDone[s.key] && activeStep !== s.key}
+									<Icon name="check" size={13} color="white" />
+								{:else}
+									{s.n}
+								{/if}
+							</span>
+							<span class="step-label">{s.label}</span>
+						</button>
+						{#if s.n < STEPS.length}<span class="step-sep" aria-hidden="true"></span>{/if}
+					</li>
+				{/each}
+			</ol>
+			<p class="step-hint"><Icon name="chevronRight" size={14} color="var(--primary)" /> {activeHint}</p>
+		</nav>
+
+		<div class="cockpit">
 		<!-- ════════ LEFT — patient context ════════ -->
-		<aside class="rail-left card">
+		<aside class="rail-left card" class:zone-active={activeStep === 'patient'} onfocusin={() => (activeStep = 'patient')}>
 			{#if selectedPatient}
 				<div class="patient-head">
 					<Avatar nom={selectedPatient.lastName} prenom={selectedPatient.firstName} sexe={selectedPatient.gender} size={64} />
@@ -467,6 +538,7 @@
 					{/if}
 
 					<!-- Constantes vitales -->
+					<div class="zone zone-vitals" bind:this={vitalsEl} class:zone-active={activeStep === 'vitals'} onfocusin={() => (activeStep = 'vitals')}>
 					<div class="vitals-head">
 						<Icon name="activity" size={16} color="var(--primary)" />
 						<span class="vitals-title">Constantes vitales</span>
@@ -495,9 +567,10 @@
 							</div>
 						{/each}
 					</div>
+					</div>
 
 					<!-- Clinical tabbed card -->
-					<div class="card clinical-card">
+					<div class="card clinical-card zone" class:zone-active={activeStep === 'clinique'} onfocusin={() => (activeStep = 'clinique')}>
 						<div class="tabs" role="tablist">
 							<button type="button" class="mk-tab" class:active={activeTab === 'motif'} role="tab" aria-selected={activeTab === 'motif'} onclick={() => (activeTab = 'motif')}>Motif &amp; examen</button>
 							<button type="button" class="mk-tab" class:active={activeTab === 'diag'} role="tab" aria-selected={activeTab === 'diag'} onclick={() => (activeTab = 'diag')}>Diagnostic</button>
@@ -531,7 +604,7 @@
 					</div>
 
 					<!-- ORDONNANCE — bloc guidé (optionnel) -->
-					<div class="ordo-block">
+					<div class="ordo-block zone" bind:this={ordoBlockEl} class:zone-active={activeStep === 'ordonnance'} onfocusin={() => (activeStep = 'ordonnance')}>
 						{#if validMedCount === 0}
 							<button type="button" class="ordo-cta" onclick={openOrdo} disabled={!selectedPatient}>
 								<span class="ordo-cta-icon"><Icon name="fileText" size={22} color="var(--primary)" /></span>
@@ -563,7 +636,7 @@
 			<!-- ════ BARRE D'ACTION — honoraires + enregistrer ════ -->
 			<div class="action-bar">
 				<div class="action-inner">
-					<div class="fee-group">
+					<div class="fee-group zone" class:zone-active={activeStep === 'honoraires'} onfocusin={() => (activeStep = 'honoraires')}>
 						<div class="fee-title"><Icon name="dollar" size={15} color="var(--primary)" /> Honoraires</div>
 						<div class="fee-line">
 							<div class="chips fee-chips">
@@ -606,7 +679,7 @@
 								<Icon name="fileText" size={15} color="var(--primary)" /> Créer une ordonnance
 							</button>
 						{/if}
-						<button type="button" class="btn-save" disabled={submitting} onclick={handleSave}>
+						<button type="button" bind:this={saveBtnEl} class="btn-save" class:emph={activeStep === 'finaliser'} disabled={submitting} onfocus={() => (activeStep = 'finaliser')} onclick={handleSave}>
 							<Icon name={submitting ? 'check' : 'dollar'} size={16} color="white" />
 							{submitting
 								? 'Enregistrement…'
@@ -617,6 +690,7 @@
 				</div>
 			</div>
 		</section>
+		</div>
 	</div>
 </form>
 
@@ -644,14 +718,60 @@
 {/if}
 
 <style>
-	.cockpit {
+	/* ── Shell: stepbar en haut, cockpit en dessous ── */
+	.consult-shell {
 		height: calc(100vh - 58px);
 		display: flex;
+		flex-direction: column;
+		background: var(--bg);
+	}
+	.cockpit {
+		flex: 1;
+		min-height: 0;
+		display: flex;
 		gap: 14px;
-		padding: 14px;
+		padding: 0 14px 14px;
 		background: var(--bg);
 		overflow: hidden;
 	}
+
+	/* ── Stepbar (guide pas à pas, issue #127) ── */
+	.stepbar { padding: 12px 14px 10px; }
+	.steps { list-style: none; display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+	.step-item { display: flex; align-items: center; min-width: 0; }
+	.step {
+		display: inline-flex; align-items: center; gap: 7px;
+		background: transparent; border: 1px solid transparent; border-radius: 22px;
+		padding: 5px 11px 5px 6px; font-family: inherit; cursor: pointer;
+		color: var(--text-muted); transition: all 0.14s; white-space: nowrap;
+	}
+	.step:hover { background: var(--surface); color: var(--text); }
+	.step-no {
+		display: inline-flex; align-items: center; justify-content: center;
+		width: 22px; height: 22px; border-radius: 50%;
+		background: var(--border); color: var(--text-muted);
+		font-size: 12px; font-weight: 700; flex-shrink: 0; transition: all 0.14s;
+	}
+	.step-label { font-size: 13px; font-weight: 600; }
+	.step.done { color: var(--success); }
+	.step.done .step-no { background: var(--success); color: white; }
+	.step.active { background: var(--primary-50); border-color: var(--primary-light); color: var(--primary-dark); }
+	.step.active .step-no { background: var(--primary); color: white; box-shadow: 0 0 0 3px var(--primary-50); }
+	.step-sep { width: 18px; height: 2px; background: var(--border); margin: 0 2px; border-radius: 2px; flex-shrink: 0; }
+	.step-hint {
+		display: flex; align-items: center; gap: 6px; margin-top: 7px;
+		font-size: 12.5px; font-weight: 500; color: var(--primary-dark);
+	}
+
+	/* ── Mise en évidence de la zone de l'étape en cours: anneau interne + teinte
+	   (l'inset évite tout rognage à l'intérieur des conteneurs en overflow). ── */
+	.zone { transition: box-shadow 0.15s, background 0.15s; }
+	.zone-vitals { border-radius: 10px; }
+	.zone-active { box-shadow: inset 0 0 0 2px var(--primary); }
+	.zone-vitals.zone-active, .fee-group.zone-active { background: var(--primary-50); border-radius: 10px; padding: 10px; }
+	.btn-save.emph { box-shadow: 0 0 0 3px var(--primary-50); animation: save-pulse 1.6s ease-in-out infinite; }
+	@keyframes save-pulse { 0%, 100% { box-shadow: 0 0 0 3px var(--primary-50); } 50% { box-shadow: 0 0 0 6px var(--primary-50); } }
+	@media (prefers-reduced-motion: reduce) { .btn-save.emph { animation: none; } }
 
 	/* ── Left rail ── */
 	.rail-left {
