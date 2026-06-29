@@ -91,7 +91,7 @@ public static class DomainMappings
             cm.SetIgnoreExtraElements(true);
             // PrescriptionLine is immutable (getter-only props, constructor-only). Without an
             // explicit creator the driver can serialize it but cannot reconstruct it on read.
-            cm.MapCreator(p => new PrescriptionLine(p.Medication, p.Dosage, p.Duration, p.Quantity, p.Frequency));
+            cm.MapCreator(p => new PrescriptionLine(p.Medication, p.Dosage, p.Duration, p.Frequency));
         });
     }
 

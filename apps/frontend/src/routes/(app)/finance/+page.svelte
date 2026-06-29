@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { frValidation } from '$lib/actions/frValidation';
 	import type { PageData, ActionData } from './$types';
 	import type { Charge } from '$lib/types/api';
 	import StatCard from '$lib/components/StatCard.svelte';
@@ -121,6 +122,7 @@
 			<form
 				method="POST"
 				action="?/addCharge&year={data.year}&month={data.month}"
+				use:frValidation
 				use:enhance={() => {
 					submitting = true;
 					return async ({ update }) => {

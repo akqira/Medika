@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
+	import { isValidDzPhone, DZ_PHONE_ERROR } from '$lib/phone';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -90,6 +92,8 @@
 	// Latin letters, Arabic letters, spaces, hyphens, apostrophes
 	const NAME_RE = /^[\p{L}\s'\-]{2,}$/u;
 
+	const NAME_MAX = 100;
+
 	function validateStep1() {
 		const e: Record<string, string> = {};
 		const fn = firstName.trim();
@@ -98,11 +102,15 @@
 			e.firstName = 'Champ requis';
 		} else if (!NAME_RE.test(fn)) {
 			e.firstName = 'Lettres uniquement, 2 caractères minimum';
+		} else if (fn.length > NAME_MAX) {
+			e.firstName = '100 caractères maximum';
 		}
 		if (!ln) {
 			e.lastName = 'Champ requis';
 		} else if (!NAME_RE.test(ln)) {
 			e.lastName = 'Lettres uniquement, 2 caractères minimum';
+		} else if (ln.length > NAME_MAX) {
+			e.lastName = '100 caractères maximum';
 		}
 		if (!dateOfBirth) {
 			e.dateOfBirth = 'Date de naissance requise';
@@ -115,7 +123,6 @@
 		return Object.keys(e).length === 0;
 	}
 
-	const PHONE_RE = /^0[5-7]\d{8}$/;
 	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 	function validateStep2() {
@@ -123,12 +130,12 @@
 		const p = phone.trim();
 		if (!p) {
 			e.phone = 'Champ requis';
-		} else if (!PHONE_RE.test(p.replace(/\s/g, ''))) {
-			e.phone = 'Format invalide — ex: 0555 12 34 56';
+		} else if (!isValidDzPhone(p)) {
+			e.phone = DZ_PHONE_ERROR;
 		}
 		const ep = emergencyContactPhone.trim();
-		if (ep && !PHONE_RE.test(ep.replace(/\s/g, ''))) {
-			e.emergencyContactPhone = 'Format invalide — ex: 0555 12 34 56';
+		if (ep && !isValidDzPhone(ep)) {
+			e.emergencyContactPhone = DZ_PHONE_ERROR;
 		}
 		const em = email.trim();
 		if (em && !EMAIL_RE.test(em)) {
@@ -214,8 +221,16 @@
 		use:enhance={() => {
 			if (!validateStep4()) return () => {}; // abort submit
 			loading = true;
-			return async ({ update }) => {
+			return async ({ result, update }) => {
 				loading = false;
+				// Success redirects to /patients (toast fires there). A failed create returns
+				// here — surface the error as a toast in addition to the inline banner (#129).
+				if (result.type === 'failure') {
+					const msg = (result.data?.error as string | undefined) ?? 'Échec de la création du patient.';
+					toast.error(msg);
+				} else if (result.type === 'error') {
+					toast.error('Échec de la création du patient.');
+				}
 				await update();
 			};
 		}}

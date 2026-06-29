@@ -27,5 +27,4 @@ public sealed record PrescriptionPdfLine(
     string Medication,
     string Dosage,
     string? Frequency,
-    string? Duration,
-    int Quantity);
+    string? Duration);

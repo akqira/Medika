@@ -1,20 +1,45 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { goto, replaceState } from '$app/navigation';
+	import { page as pageState } from '$app/state';
 	import type { PageData } from './$types';
 	import type { PatientSummary, PagedResult } from '$lib/types/api';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	// Issue #129 — success notifications. The patient-new and consultation-save server
+	// actions redirect here with `?toast=…`; surface the matching toast once on mount,
+	// then strip the param so a refresh/back doesn't re-fire it. onMount (not $effect)
+	// guarantees a single fire — a reactive effect would re-run and loop on the param.
+	const TOAST_MESSAGES: Record<string, string> = {
+		'patient-created': 'Patient créé avec succès.',
+		'consultation-saved': 'Consultation enregistrée avec succès.',
+	};
+	onMount(() => {
+		const kind = pageState.url.searchParams.get('toast');
+		const message = kind && TOAST_MESSAGES[kind];
+		if (!message) return;
+		toast.success(message);
+		// Strip only our own param; `created` is an existing signal other code/tests rely on.
+		const url = new URL(pageState.url);
+		url.searchParams.delete('toast');
+		replaceState(url, {});
+	});
 
 	const PAGE_SIZE = 20;
 
 	// Client-accumulated list (SSR gives page 1; we append on scroll).
-	let patients   = $state<PatientSummary[]>(data.result.items);
-	let term       = $state(data.term ?? '');
-	let page       = $state(data.result.page);
-	let hasNext    = $state(data.result.hasNextPage);
-	let total      = $state(data.result.totalCount);
+	let patients      = $state<PatientSummary[]>(data.result.items);
+	let term          = $state(data.term ?? '');
+	let page          = $state(data.result.page);
+	let hasNext       = $state(data.result.hasNextPage);
+	// cabinetTotal: real total for this cabinet — never updated by search
+	let cabinetTotal  = $state(data.cabinetTotal);
+	// filteredTotal: count matching the current search term
+	let filteredTotal = $state(data.result.totalCount);
 	let loadingMore = $state(false);
 	let searching   = $state(false);
 	let loadError   = $state('');
@@ -51,7 +76,7 @@
 		patients = r.items;
 		page = 1;
 		hasNext = r.hasNextPage;
-		total = r.totalCount;
+		filteredTotal = r.totalCount;
 		if (listEl) listEl.scrollTop = 0;
 	}
 
@@ -110,7 +135,7 @@
 	<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
 		<div style="display:flex;align-items:baseline;gap:10px">
 			<h1 style="font-size:20px;font-weight:700;letter-spacing:-0.3px">Patients</h1>
-			<span style="font-size:13px;color:var(--text-muted)">{total} au total</span>
+			<span style="font-size:13px;color:var(--text-muted)">{cabinetTotal} au total</span>
 		</div>
 		<a href="/patients/new" style="display:inline-flex;align-items:center;gap:6px;padding:9px 15px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-size:13.5px;font-weight:600">
 			<Icon name="plus" size={14} color="white" /> Nouveau patient
@@ -135,7 +160,11 @@
 		{/if}
 	</div>
 	<div style="font-size:11.5px;color:var(--text-light);margin-bottom:10px;padding-left:2px">
-		Astuce : tapez pour filtrer, puis ↑ ↓ et Entrée — sans la souris.
+		{#if term}
+			{filteredTotal} résultat{filteredTotal !== 1 ? 's' : ''}
+		{:else}
+			Astuce : tapez pour filtrer, puis ↑ ↓ et Entrée — sans la souris.
+		{/if}
 	</div>
 
 	{#if loadError}

@@ -52,6 +52,24 @@ test.describe('Finance — add charge validation failures', () => {
 		await expect(page.locator('#charge-description')).toHaveJSProperty('validity.valid', false);
 	});
 
+	// Issue #101 — a whitespace-only description passes the HTML5 `required`
+	// constraint (validity.valid === true) but must NOT reach the server as a
+	// blank charge. The action trims the input, so it is rejected with a 400 FR
+	// message — never the generic 500 "Erreur serveur.".
+	test('a whitespace-only description is rejected with a 400 FR message', async ({ page }) => {
+		await page.locator('#charge-category').selectOption('Loyer');
+		await page.locator('#charge-description').fill('   ');
+		await page.locator('#charge-amount').fill('5000');
+
+		// HTML5 thinks the field is filled — the guard must come from the server.
+		await expect(page.locator('#charge-description')).toHaveJSProperty('validity.valid', true);
+		await page.getByRole('button', { name: 'Ajouter la charge' }).click();
+
+		await expect(page.getByText('La description est requise.')).toBeVisible();
+		await expect(page.getByText('Erreur serveur.')).toHaveCount(0);
+		await expect(page.getByText('Charge ajoutée avec succès.')).toHaveCount(0);
+	});
+
 	// Happy path — guards the FR-label/EN-enum regression: "Loyer" must persist as
 	// ChargeCategory.Rent (previously Enum.Parse rejected the French label → 400).
 	test('a valid charge is created and shown, then removed (cleanup)', async ({ page }) => {

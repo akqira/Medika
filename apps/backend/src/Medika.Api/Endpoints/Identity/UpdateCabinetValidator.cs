@@ -1,11 +1,12 @@
 using FastEndpoints;
 using FluentValidation;
+using Medika.Application.Common.Validation;
 
 namespace Medika.Api.Endpoints.Identity;
 
 public class UpdateCabinetValidator : Validator<UpdateCabinetRequest>
 {
-    // Algerian phone: mobile (05/06/07) or fixed (02/03/04), 10 digits total.
+    // Shared Algerian phone rule (#124): mobile (05/06/07, 10 digits) or fixe (0[1-4], 9 digits).
     public UpdateCabinetValidator()
     {
         RuleFor(x => x.CabinetName)
@@ -13,8 +14,8 @@ public class UpdateCabinetValidator : Validator<UpdateCabinetRequest>
             .WithMessage("Le nom du cabinet est requis.");
 
         RuleFor(x => x.CabinetPhone)
-            .Matches(@"^0[2-7]\d{8}$")
-            .WithMessage("Numéro algérien invalide — ex : 0550 12 34 56 ou 023 45 67 89")
+            .Must(AlgerianPhone.IsValid)
+            .WithMessage(AlgerianPhone.ErrorMessage)
             .When(x => !string.IsNullOrWhiteSpace(x.CabinetPhone));
     }
 }

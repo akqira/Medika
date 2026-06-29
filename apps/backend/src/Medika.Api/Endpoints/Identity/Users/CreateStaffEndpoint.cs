@@ -1,5 +1,6 @@
 using FastEndpoints;
 using FluentValidation;
+using Medika.Api.Common.Validation;
 using Medika.Application.Identity.Commands.CreateStaff;
 
 namespace Medika.Api.Endpoints.Identity.Users;
@@ -18,7 +19,7 @@ public class CreateStaffValidator : Validator<CreateStaffRequest>
 {
     public CreateStaffValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Email).ValidEmail();
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);

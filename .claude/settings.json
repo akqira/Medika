@@ -16,7 +16,7 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "cd apps/frontend && pnpm check 2>&1 | tail -20", "shell": "bash", "timeout": 60, "statusMessage": "Checking frontend types..." }]
+        "hooks": [{ "type": "command", "command": "cd \"$(git -C \"${PWD}\" rev-parse --show-toplevel 2>/dev/null || echo /home/runner/work/Medika/Medika)\"/apps/frontend && pnpm check 2>&1 | tail -20", "shell": "bash", "timeout": 60, "statusMessage": "Checking frontend types..." }]
       },
       {
         "matcher": "Bash",

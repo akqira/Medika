@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import { isValidDzPhone, DZ_PHONE_ERROR } from '$lib/phone';
 	import type { PatientSummary } from '$lib/types/api';
 
 	let { onPatientAdded, onClose }: {
@@ -23,7 +24,7 @@
 	const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
 
 	const NAME_RE  = /^[\p{L}\s'\-]{2,}$/u;
-	const PHONE_RE = /^0[5-7]\d{8}$/;
+	const NAME_MAX = 100;
 
 	function validate(): boolean {
 		const e: Record<string, string> = {};
@@ -31,14 +32,16 @@
 		const ln = lastName.trim();
 		const ph = phone.trim().replace(/\s/g, '');
 
-		if (!fn)                    e.firstName = 'Champ requis';
-		else if (!NAME_RE.test(fn)) e.firstName = 'Lettres uniquement, 2 caractères minimum';
+		if (!fn)                       e.firstName = 'Champ requis';
+		else if (!NAME_RE.test(fn))    e.firstName = 'Lettres uniquement, 2 caractères minimum';
+		else if (fn.length > NAME_MAX) e.firstName = '100 caractères maximum';
 
-		if (!ln)                    e.lastName = 'Champ requis';
-		else if (!NAME_RE.test(ln)) e.lastName = 'Lettres uniquement, 2 caractères minimum';
+		if (!ln)                       e.lastName = 'Champ requis';
+		else if (!NAME_RE.test(ln))    e.lastName = 'Lettres uniquement, 2 caractères minimum';
+		else if (ln.length > NAME_MAX) e.lastName = '100 caractères maximum';
 
 		if (!ph)                      e.phone = 'Champ requis';
-		else if (!PHONE_RE.test(ph))  e.phone = 'Format invalide — ex: 0555 12 34 56';
+		else if (!isValidDzPhone(ph)) e.phone = DZ_PHONE_ERROR;
 
 		if (!dob)              e.dob = 'Date de naissance requise';
 		else if (dob > maxDate) e.dob = 'La date ne peut pas être dans le futur';
@@ -131,12 +134,12 @@
 		<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
 			<div>
 				<label for="qap-firstName" class="ql">PRÉNOM *</label>
-				<input id="qap-firstName" bind:value={firstName} class="mk-input" class:input-err={errors.firstName} placeholder="Ahmed" />
+				<input id="qap-firstName" bind:value={firstName} maxlength={NAME_MAX} class="mk-input" class:input-err={errors.firstName} placeholder="Ahmed" />
 				{#if errors.firstName}<p class="qe"><Icon name="alertCircle" size={11} color="var(--danger)" />{errors.firstName}</p>{/if}
 			</div>
 			<div>
 				<label for="qap-lastName" class="ql">NOM *</label>
-				<input id="qap-lastName" bind:value={lastName} class="mk-input" class:input-err={errors.lastName} placeholder="Benali" />
+				<input id="qap-lastName" bind:value={lastName} maxlength={NAME_MAX} class="mk-input" class:input-err={errors.lastName} placeholder="Benali" />
 				{#if errors.lastName}<p class="qe"><Icon name="alertCircle" size={11} color="var(--danger)" />{errors.lastName}</p>{/if}
 			</div>
 		</div>

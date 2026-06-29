@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { frValidation } from '$lib/actions/frValidation';
 	import type { PageData, ActionData } from './$types';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import { isValidDzPhone, DZ_PHONE_ERROR } from '$lib/phone';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -28,9 +30,8 @@
 	let cabinetAddress = $state(data.profile.cabinetAddress ?? '');
 	let cabinetWilaya  = $state(data.profile.cabinetWilaya ?? '');
 
-	// Cabinet phone — numeric-only field, validated as an Algerian number
-	// (mobile 05/06/07 or fixed 02/03/04), 10 digits total.
-	const DZ_PHONE_RE = /^0[2-7]\d{8}$/;
+	// Cabinet phone — numeric-only field, validated as an Algerian number via the
+	// shared rule ($lib/phone): mobile (05/06/07, 10 digits) or fixe (0[1-4], 9 digits).
 	let cabinetPhone = $state(data.profile.cabinetPhone ?? '');
 	let phoneError   = $state('');
 	let nameError    = $state('');
@@ -63,8 +64,8 @@
 
 	function validateCabinetPhone(): boolean {
 		const p = cabinetPhone.trim();
-		if (p && !DZ_PHONE_RE.test(p)) {
-			phoneError = 'Numéro algérien invalide — ex : 0550 12 34 56 ou 023 45 67 89';
+		if (p && !isValidDzPhone(p)) {
+			phoneError = DZ_PHONE_ERROR;
 			return false;
 		}
 		phoneError = '';
@@ -156,7 +157,7 @@
 
 			<!-- ─── TAB: Mon cabinet ─── -->
 			{#if activeTab === 'cabinet'}
-				<form method="POST" action="?/saveCabinet" use:enhance={({ cancel }) => {
+				<form method="POST" action="?/saveCabinet" use:frValidation use:enhance={({ cancel }) => {
 					// Name is required identification — block the save and surface it
 					// so the empty value never reaches the server (mirrors #133).
 					const nameOk  = validateCabinetName();
@@ -236,7 +237,7 @@
 
 			<!-- ─── TAB: Mon compte ─── -->
 			{:else if activeTab === 'compte'}
-				<form method="POST" action="?/saveAccount" use:enhance>
+				<form method="POST" action="?/saveAccount" use:frValidation use:enhance>
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
 
 						<div>
@@ -270,7 +271,7 @@
 
 			<!-- ─── TAB: Sécurité ─── -->
 			{:else}
-				<form method="POST" action="?/changePassword" use:enhance>
+				<form method="POST" action="?/changePassword" use:frValidation use:enhance>
 					<div style="max-width:380px;display:flex;flex-direction:column;gap:16px;margin-bottom:20px">
 
 						<div>
