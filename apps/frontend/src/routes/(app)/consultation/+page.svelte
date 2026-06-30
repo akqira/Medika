@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
 	import type { PageData, ActionData } from './$types';
@@ -249,6 +250,12 @@
 
 	function openOrdo() {
 		showOrdo = true;
+	}
+
+	// « Annuler » — quitte la consultation sans enregistrer : retour au dossier du
+	// patient si l'on vient de là, sinon la liste des patients.
+	function cancelConsultation() {
+		goto(selectedPatientId ? `/patients/${selectedPatientId}` : '/patients');
 	}
 
 	const prescriptionJson = $derived(
@@ -529,38 +536,40 @@
 							</div>
 						</div>
 					</div>
-
-					<!-- ORDONNANCE — bloc guidé (optionnel) -->
-					<div class="ordo-block">
-						{#if validMedCount === 0}
-							<button type="button" class="ordo-cta" onclick={openOrdo} disabled={!selectedPatient}>
-								<span class="ordo-cta-icon"><Icon name="fileText" size={22} color="var(--primary)" /></span>
-								<span class="ordo-cta-text">
-									<span class="ordo-cta-title">Créer une ordonnance</span>
-									<span class="ordo-cta-sub">Optionnel — recherchez et prescrivez des médicaments dans une fenêtre dédiée.</span>
-								</span>
-								<span class="ordo-cta-open">Ouvrir <Icon name="chevronRight" size={16} color="var(--primary)" /></span>
-							</button>
-						{:else}
-							<div class="card ordo-ready">
-								<span class="ordo-ready-icon"><Icon name="checkCircle" size={22} color="var(--success)" /></span>
-								<div class="ordo-ready-text">
-									<div class="ordo-ready-title">Ordonnance prête</div>
-									<div class="ordo-ready-sub">{validMedCount} médicament{validMedCount > 1 ? 's' : ''} prescrit{validMedCount > 1 ? 's' : ''}.</div>
-								</div>
-								<button type="button" class="btn-outline" onclick={() => (showPrint = true)}>
-									<Icon name="printer" size={14} color="var(--text-muted)" /> Imprimer
-								</button>
-								<button type="button" class="btn-primary-sm" onclick={() => (showOrdo = true)}>
-									<Icon name="edit" size={14} color="white" /> Modifier
-								</button>
-							</div>
-						{/if}
-					</div>
 				</div>
 			</div>
 
-			<!-- ════ BARRE D'ACTION — honoraires + enregistrer ════ -->
+			<!-- ════ ORDONNANCE — barre fixe, toujours visible (hors zone scrollable) ════ -->
+			<div class="ordo-bar">
+				<div class="ordo-bar-inner">
+					{#if validMedCount === 0}
+						<button type="button" class="ordo-cta" onclick={openOrdo} disabled={!selectedPatient}>
+							<span class="ordo-cta-icon"><Icon name="fileText" size={20} color="var(--primary)" /></span>
+							<span class="ordo-cta-text">
+								<span class="ordo-cta-title">Créer une ordonnance</span>
+								<span class="ordo-cta-sub">Optionnel — prescrivez des médicaments dans une fenêtre dédiée.</span>
+							</span>
+							<span class="ordo-cta-open">Ouvrir <Icon name="chevronRight" size={16} color="var(--primary)" /></span>
+						</button>
+					{:else}
+						<div class="ordo-ready">
+							<span class="ordo-ready-icon"><Icon name="checkCircle" size={20} color="var(--success)" /></span>
+							<div class="ordo-ready-text">
+								<div class="ordo-ready-title">Ordonnance prête</div>
+								<div class="ordo-ready-sub">{validMedCount} médicament{validMedCount > 1 ? 's' : ''} prescrit{validMedCount > 1 ? 's' : ''}.</div>
+							</div>
+							<button type="button" class="btn-outline" onclick={() => (showPrint = true)}>
+								<Icon name="printer" size={14} color="var(--text-muted)" /> Imprimer
+							</button>
+							<button type="button" class="btn-primary-sm" onclick={() => (showOrdo = true)}>
+								<Icon name="edit" size={14} color="white" /> Modifier
+							</button>
+						</div>
+					{/if}
+				</div>
+			</div>
+
+			<!-- ════ BARRE D'ACTION — honoraires + annuler + enregistrer ════ -->
 			<div class="action-bar">
 				<div class="action-inner">
 					<div class="fee-group">
@@ -601,11 +610,9 @@
 					<div class="action-spacer"></div>
 
 					<div class="action-btns">
-						{#if validMedCount === 0}
-							<button type="button" class="btn-ordo-secondary" onclick={openOrdo} disabled={!selectedPatient}>
-								<Icon name="fileText" size={15} color="var(--primary)" /> Créer une ordonnance
-							</button>
-						{/if}
+						<button type="button" class="btn-cancel" disabled={submitting} onclick={cancelConsultation}>
+							Annuler
+						</button>
 						<button type="button" class="btn-save" disabled={submitting} onclick={handleSave}>
 							<Icon name={submitting ? 'check' : 'dollar'} size={16} color="white" />
 							{submitting
@@ -1004,20 +1011,27 @@
 		color: var(--primary);
 	}
 
-	/* ── Ordonnance block ── */
-	.ordo-block {
-		margin-top: 18px;
+	/* ── Ordonnance bar (pinned, always visible above the action bar) ── */
+	.ordo-bar {
+		flex-shrink: 0;
+		border-top: 1px solid var(--border);
+		background: var(--bg);
+		padding: 12px 20px;
+	}
+	.ordo-bar-inner {
+		max-width: 880px;
+		margin: 0 auto;
 	}
 	.ordo-cta {
 		width: 100%;
 		display: flex;
 		align-items: center;
-		gap: 16px;
+		gap: 14px;
 		text-align: left;
 		background: var(--surface);
 		border: 1.5px dashed var(--border-strong);
-		border-radius: 12px;
-		padding: 18px 20px;
+		border-radius: 10px;
+		padding: 11px 16px;
 		cursor: pointer;
 		font-family: inherit;
 		transition: all 0.12s;
@@ -1031,9 +1045,9 @@
 		cursor: not-allowed;
 	}
 	.ordo-cta-icon {
-		width: 46px;
-		height: 46px;
-		border-radius: 11px;
+		width: 38px;
+		height: 38px;
+		border-radius: 10px;
 		flex-shrink: 0;
 		background: var(--primary-light);
 		display: flex;
@@ -1044,14 +1058,14 @@
 		flex: 1;
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 1px;
 	}
 	.ordo-cta-title {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 700;
 	}
 	.ordo-cta-sub {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--text-muted);
 	}
 	.ordo-cta-open {
@@ -1065,16 +1079,19 @@
 	}
 
 	.ordo-ready {
-		padding: 16px 20px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-left: 4px solid var(--success);
+		border-radius: 10px;
+		padding: 11px 16px;
 		display: flex;
 		align-items: center;
-		gap: 16px;
-		border-left: 4px solid var(--success);
+		gap: 14px;
 	}
 	.ordo-ready-icon {
-		width: 46px;
-		height: 46px;
-		border-radius: 11px;
+		width: 38px;
+		height: 38px;
+		border-radius: 10px;
 		flex-shrink: 0;
 		background: var(--success-light);
 		display: flex;
@@ -1085,7 +1102,7 @@
 		flex: 1;
 	}
 	.ordo-ready-title {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 700;
 	}
 	.ordo-ready-sub {
@@ -1187,24 +1204,25 @@
 		align-items: center;
 		gap: 10px;
 	}
-	.btn-ordo-secondary {
+	.btn-cancel {
 		display: inline-flex;
 		align-items: center;
 		gap: 7px;
 		background: var(--surface);
-		border: 1px solid var(--primary);
-		color: var(--primary);
+		border: 1px solid var(--border-strong);
+		color: var(--text-muted);
 		border-radius: 9px;
-		padding: 11px 18px;
+		padding: 11px 20px;
 		font-family: inherit;
 		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
 	}
-	.btn-ordo-secondary:hover:not(:disabled) {
-		background: var(--primary-50);
+	.btn-cancel:hover:not(:disabled) {
+		border-color: var(--text-muted);
+		color: var(--text);
 	}
-	.btn-ordo-secondary:disabled {
+	.btn-cancel:disabled {
 		opacity: 0.55;
 		cursor: not-allowed;
 	}
