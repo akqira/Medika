@@ -93,6 +93,9 @@ public class SaveConsultationHandler(
                 cabinetId,
                 cmd.PatientId, consultation.Id.ToString(),
                 currentUser.UserId, cmd.Tariff, invoiceNumber, cmd.ActName);
+            // Encaissement = finalisation : le paiement (espèces) se fait sur place.
+            // La facture est donc payée immédiatement, sans étape d'encaissement séparée.
+            invoice.MarkPaid(PaymentMethod.Cash);
             await invoices.AddAsync(invoice, ct);
 
             var patient = await patients.GetByIdAsync(PatientId.From(cmd.PatientId), ct);

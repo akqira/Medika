@@ -155,6 +155,18 @@ test('JOURNEY-02 — register a patient, consult, prescribe two meds, bill 2 000
 		const names = meds.map((m) => m.medication).join(' | ');
 		expect(names).toContain('Paracétamol');
 		expect(names).toContain('Smecta');
+
+		// ── Encaissement automatique : la facture est payée (espèces) dès la
+		// finalisation, sans étape d'encaissement séparée (plus de bouton/fenêtre). ──
+		const invRes = await page.request.get(`/api/patients/${patientId}/invoices`);
+		expect(invRes.ok(), `GET invoices → ${invRes.status()}`).toBeTruthy();
+		const invoices: { consultationId: string; amount: number; status: string; paymentMethod?: string }[] =
+			await invRes.json();
+		const invoice = invoices.find((i) => i.consultationId === consultationId);
+		expect(invoice, 'facture créée pour la consultation').toBeTruthy();
+		expect(invoice!.status, 'facture payée immédiatement').toBe('Paid');
+		expect(invoice!.paymentMethod, 'réglée en espèces').toBe('Cash');
+		expect(invoice!.amount).toBe(HONORAIRE);
 	} finally {
 		// Best-effort teardown. A finalized consultation makes the patient
 		// un-deletable by design (400 "a des consultations…"), and no endpoint can

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invalidateAll, replaceState } from '$app/navigation';
+	import { replaceState } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import type { PageData } from './$types';
-	import type { ConsultationDetail, PatientInvoice } from '$lib/types/api';
+	import type { ConsultationDetail } from '$lib/types/api';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import Badge from '$lib/components/Badge.svelte';
@@ -81,40 +81,6 @@
 			detailCache = { ...detailCache, [id]: detail };
 		} catch {
 			detailCache = { ...detailCache, [id]: 'error' };
-		}
-	}
-
-	// ── Encaissement (espèces uniquement) ──
-	let payInvoice = $state<PatientInvoice | null>(null);
-	let paySubmitting = $state(false);
-	let payError = $state('');
-
-	function openPay(inv: PatientInvoice) {
-		payInvoice = inv;
-		payError = '';
-		paySubmitting = false;
-	}
-
-	async function confirmPayment() {
-		if (!payInvoice) return;
-		paySubmitting = true;
-		payError = '';
-		try {
-			const res = await fetch(`/api/invoices/${payInvoice.id}/pay`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ paymentMethod: 'Cash' })
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body?.error || `Erreur ${res.status}`);
-			}
-			payInvoice = null;
-			await invalidateAll(); // reload the dossier so the invoice flips to Payée
-		} catch (e) {
-			payError = e instanceof Error ? e.message : "Erreur lors de l'encaissement.";
-		} finally {
-			paySubmitting = false;
 		}
 	}
 
@@ -387,7 +353,7 @@
 					<div class="card" style="padding:0;overflow:hidden">
 						<table class="mk-table">
 							<thead>
-								<tr><th>N°</th><th>Date</th><th>Statut</th><th style="text-align:right">Montant</th><th></th></tr>
+								<tr><th>N°</th><th>Date</th><th>Statut</th><th style="text-align:right">Montant</th></tr>
 							</thead>
 							<tbody>
 								{#each invoices.data as inv}
@@ -404,14 +370,6 @@
 											{/if}
 										</td>
 										<td style="text-align:right;font-size:13.5px;font-weight:600;white-space:nowrap">{fmt.format(inv.amount)} DA</td>
-										<td style="text-align:right;white-space:nowrap">
-											{#if inv.status === 'Pending'}
-												<button type="button" onclick={() => openPay(inv)}
-													style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--primary);color:white;border:none;border-radius:7px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">
-													<Icon name="wallet" size={13} color="white" /> Encaisser
-												</button>
-											{/if}
-										</td>
 									</tr>
 								{/each}
 							</tbody>
@@ -423,55 +381,6 @@
 		</main>
 	</div>
 </div>
-
-<!-- Encaissement modal (espèces uniquement) -->
-{#if payInvoice}
-	<div
-		role="presentation"
-		onclick={() => { if (!paySubmitting) payInvoice = null; }}
-		onkeydown={(e) => { if (e.key === 'Escape' && !paySubmitting) payInvoice = null; }}
-		style="position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px"
-	>
-		<div
-			class="card"
-			role="dialog"
-			aria-modal="true"
-			tabindex="-1"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-			style="width:100%;max-width:400px;padding:24px"
-		>
-			<h2 style="font-size:16px;font-weight:700;margin:0 0 4px">Encaisser la facture</h2>
-			<p style="font-size:13px;color:var(--text-muted);margin:0 0 18px">
-				{payInvoice.number} · <strong style="color:var(--text)">{fmt.format(payInvoice.amount)} DA</strong>
-			</p>
-
-			{#if payError}
-				<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--danger-light);border:1px solid #FECACA;border-radius:8px;margin-bottom:14px">
-					<Icon name="alertCircle" size={14} color="var(--danger)" />
-					<span style="font-size:13px;color:var(--danger)">{payError}</span>
-				</div>
-			{/if}
-
-			<div style="font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:6px">Mode de paiement</div>
-			<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:20px">
-				<Icon name="wallet" size={15} color="var(--primary)" />
-				<span style="font-size:13.5px;font-weight:600;color:var(--text)">Espèces</span>
-			</div>
-
-			<div style="display:flex;gap:10px;justify-content:flex-end">
-				<button type="button" disabled={paySubmitting} onclick={() => payInvoice = null}
-					style="padding:9px 18px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:13.5px;cursor:pointer">
-					Annuler
-				</button>
-				<button type="button" disabled={paySubmitting} onclick={confirmPayment}
-					style="padding:9px 22px;background:var(--primary);color:white;border:none;border-radius:7px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;opacity:{paySubmitting ? 0.6 : 1}">
-					{paySubmitting ? 'Encaissement…' : 'Confirmer'}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
 
 <style>
 	.sec-title {
