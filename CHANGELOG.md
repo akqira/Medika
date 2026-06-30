@@ -6,6 +6,7 @@ All notable changes to Medika are documented here. Format follows
 its own branch, so it merges through the e2e gate into `dev`.
 
 ## [Unreleased]
+- feat(consultation): encaissement automatique à la finalisation (#156) (#157, closes #156)
 - docs: cut v0.2.0 release (changelog + roadmap) (#151)
 
 ## [0.2.0] - 2026-06-29
