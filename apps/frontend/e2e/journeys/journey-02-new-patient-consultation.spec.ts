@@ -109,7 +109,7 @@ test('JOURNEY-02 — register a patient, consult, prescribe two meds, bill 2 000
 		// L'ordonnance vit désormais dans une fenêtre plein écran pilotée par la
 		// recherche : on ouvre la fenêtre, on ajoute deux lignes depuis le catalogue,
 		// puis on précise nom + posologie dans le panneau éditable de droite.
-		await page.getByRole('button', { name: 'Créer une ordonnance', exact: true }).click();
+		await page.getByRole('button', { name: /Créer une ordonnance/ }).click();
 		await expect(page.getByRole('dialog', { name: 'Nouvelle ordonnance' })).toBeVisible();
 
 		// Deux clics sur le catalogue créent deux lignes éditables.
