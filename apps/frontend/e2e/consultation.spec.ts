@@ -24,12 +24,12 @@ async function createAndSelectPatient(page: Page) {
 	await page.locator('#qap-dob').fill('1990-05-15');
 	await page.getByRole('button', { name: 'Créer le patient' }).click();
 	// Auto-selected → the ordonnance CTA flips enabled.
-	await expect(page.getByRole('button', { name: 'Créer une ordonnance', exact: true })).toBeEnabled();
+	await expect(page.getByRole('button', { name: /Créer une ordonnance/ })).toBeEnabled();
 }
 
 // Opens the dedicated ordonnance window (search-driven, new MediKa brand design).
 async function openOrdonnance(page: Page) {
-	await page.getByRole('button', { name: 'Créer une ordonnance', exact: true }).click();
+	await page.getByRole('button', { name: /Créer une ordonnance/ }).click();
 	await expect(page.getByRole('dialog', { name: 'Nouvelle ordonnance' })).toBeVisible();
 }
 
@@ -63,7 +63,7 @@ test.describe('Consultation — save failures', () => {
 
 	test('the ordonnance CTA is disabled until a patient is picked', async ({ page }) => {
 		// Fresh load, no patient → the action-bar CTA is disabled.
-		await expect(page.getByRole('button', { name: 'Créer une ordonnance', exact: true })).toBeDisabled();
+		await expect(page.getByRole('button', { name: /Créer une ordonnance/ })).toBeDisabled();
 	});
 });
 
